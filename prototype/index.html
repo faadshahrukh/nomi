@@ -1,0 +1,147 @@
+<title>Nomi App Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: centered phone frame on wide screens, full-bleed app on phones. Tabs: Today / Progress / Nomi. */
+:root{
+  --bg:#dfe9e1; --phone:#f6faf5; --card:#ffffff; --ink:#1b2a24; --mute:#66786f; --line:#dbe6dd;
+  --accent:#2f9e6e; --accent-ink:#ffffff; --sun:#f3c14b; --body:#ffe0a8; --face:#1b2a24;
+  --display:'Bricolage Grotesque',system-ui,sans-serif; --text:'DM Sans',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1511; --phone:#13201a; --card:#1b2c24; --ink:#e8f2ec; --mute:#8aa196; --line:#27392f;
+  --accent:#4cc690; --accent-ink:#08150f; --sun:#f3c14b; --body:#f0c98a; --face:#1b2a24; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1511; --phone:#13201a; --card:#1b2c24; --ink:#e8f2ec; --mute:#8aa196; --line:#27392f;
+  --accent:#4cc690; --accent-ink:#08150f; --sun:#f3c14b; --body:#f0c98a; --face:#1b2a24; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.4 var(--text);display:grid;place-items:center;padding-inline:16px}
+.phone{width:100%;max-width:390px;height:min(820px,calc(100% - 24px));background:var(--phone);border-radius:44px;
+  border:8px solid var(--ink);display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:0 24px 60px #0003}
+@media(max-width:480px){body{padding:0}.phone{max-width:none;height:100%;border:0;border-radius:0;box-shadow:none}}
+.screen{flex:1;overflow-y:auto;padding:22px 20px 16px;min-height:0}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:28px;line-height:1.1}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.hero{display:flex;gap:14px;align-items:center;margin:14px 0 20px}
+.bubble{background:var(--card);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:10px 14px;flex:1;min-width:0}
+.nomi{width:84px;height:84px;flex:none;position:relative;animation:bob 3.2s ease-in-out infinite}
+.nomi .b{position:absolute;inset:6px 4px 0;background:var(--body);border-radius:50% 50% 46% 46%}
+.nomi .e{position:absolute;top:34px;width:9px;height:9px;border-radius:50%;background:var(--face)}
+.nomi .e.l{left:27px}.nomi .e.r{right:27px}
+.nomi .m{position:absolute;left:50%;top:50px;width:20px;height:10px;margin-left:-10px;border:3px solid var(--face);border-top:0;border-radius:0 0 20px 20px;transition:.3s}
+.nomi.sad .m{border-radius:20px 20px 0 0;border:3px solid var(--face);border-bottom:0;top:54px}
+.nomi.big .m{height:14px;background:var(--face)}
+.nomi .c{position:absolute;top:46px;width:12px;height:7px;border-radius:50%;background:#f08a7a;opacity:.55}
+.nomi .c.l{left:14px}.nomi .c.r{right:14px}
+@keyframes bob{50%{transform:translateY(-5px)}}
+@media(prefers-reduced-motion:reduce){.nomi{animation:none}}
+.ring{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.bar{flex:1;height:10px;background:var(--line);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:9px;transition:width .4s}
+.habit{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:12px 14px;margin-bottom:10px;color:inherit;font:inherit;cursor:pointer}
+.habit:focus-visible,.tab:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hi{width:40px;height:40px;border-radius:12px;background:var(--phone);display:grid;place-items:center;font-size:20px;flex:none}
+.ht{flex:1;min-width:0}.ht b{display:block;font-weight:600}.ht span{font-size:13px;color:var(--mute)}
+.chk{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;transition:.2s;color:transparent;font-weight:700}
+.habit.done .chk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.habit.done .ht b{text-decoration:line-through;color:var(--mute)}
+.tabs{display:flex;border-top:1px solid var(--line);background:var(--phone);padding:6px 8px 10px}
+.tab{flex:1;background:none;border:0;color:var(--mute);font:600 12px var(--text);padding:8px 0;border-radius:12px;cursor:pointer;display:grid;gap:2px;justify-items:center}
+.tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-selected=true]{color:var(--accent)}
+.fab{position:absolute;right:18px;bottom:84px;width:54px;height:54px;border-radius:18px;border:0;background:var(--accent);color:var(--accent-ink);font-size:28px;cursor:pointer;box-shadow:0 8px 20px #0003}
+.sheet{position:absolute;inset:0;background:#0006;display:flex;align-items:flex-end;z-index:5}
+.sheet>div{background:var(--phone);width:100%;border-radius:26px 26px 0 0;padding:22px 20px 28px;display:grid;gap:14px}
+input[type=text]{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;width:100%}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:12px;font-size:20px;padding:6px 10px;cursor:pointer;color:inherit}
+.chip[aria-pressed=true]{border-color:var(--accent);background:var(--accent);}
+.btn{border:0;border-radius:14px;padding:13px;font:600 15px var(--text);cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:none;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+.week{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:12px}
+.week div{flex:1;display:grid;gap:6px;justify-items:center;height:100%;align-content:end;font-size:11px;color:var(--mute)}
+.week i{width:100%;background:var(--accent);border-radius:8px;min-height:6px}
+.week .today i{background:var(--sun)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stats .card{margin:0}.stats b{font:700 28px var(--display);display:block}
+.stats span{font-size:13px;color:var(--mute)}
+.toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--phone);padding:8px 14px;border-radius:12px;font-size:13px;z-index:6}
+.acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tag{background:var(--phone);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px}
+.tag.lock{opacity:.5}
+</style>
+<div class="phone" id="app">
+  <div class="screen" id="screen"></div>
+  <button class="fab" id="fab" aria-label="Add habit">+</button>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-t="today"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>Today</button>
+    <button class="tab" role="tab" data-t="progress"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Progress</button>
+    <button class="tab" role="tab" data-t="nomi"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M9 12h.01M15 12h.01M9.5 16c1.5 1.5 3.500 1.500 5 0"/></svg>Nomi</button>
+  </nav>
+</div>
+<script>
+const days=['M','T','W','T','F','S','S'];
+let S={tab:'today',habits:[
+ {id:1,icon:'💧',name:'Drink water',sub:'8 glasses',done:true,streak:12},
+ {id:2,icon:'🚶',name:'Walk 20 minutes',sub:'Before lunch',done:false,streak:5},
+ {id:3,icon:'📖',name:'Read 10 pages',sub:'Evening',done:false,streak:3},
+ {id:4,icon:'🧘',name:'Stretch',sub:'Morning',done:true,streak:8}],
+ week:[3,4,2,4,3,4,0],sheet:false,icon:'⭐',toast:''};
+const $=s=>document.querySelector(s);
+const cnt=()=>S.habits.filter(h=>h.done).length;
+function face(){const r=S.habits.length?cnt()/S.habits.length:0;return r===1?'big':r<.34?'sad':''}
+function say(){const r=cnt(),n=S.habits.length;
+ if(!n)return"Add a habit and we'll start together.";
+ if(r===n)return"All done today. I'm so proud of you!";
+ if(r===0)return"Good morning! One small thing to start?";
+ return `${r} down, ${n-r} to go. You've got this.`}
+function nomi(cls){return `<div class="nomi ${cls}" aria-hidden="true"><div class="b"></div><div class="e l"></div><div class="e r"></div><div class="c l"></div><div class="c r"></div><div class="m"></div></div>`}
+function today(){const n=S.habits.length,r=cnt();
+ return `<div class="eyebrow">Thursday, 1 October</div><h1>Hi Sam</h1>
+ <div class="hero">${nomi(face())}<div class="bubble">${say()}</div></div>
+ <div class="ring"><div class="bar"><i style="width:${n?r/n*100:0}%"></i></div><b>${r}/${n}</b></div>
+ ${S.habits.map(h=>`<button class="habit ${h.done?'done':''}" data-id="${h.id}" aria-pressed="${h.done}">
+  <div class="hi">${h.icon}</div><div class="ht"><b>${h.name}</b><span>${h.sub} · ${h.streak}-day streak</span></div><div class="chk">✓</div></button>`).join('')}`}
+function progress(){const w=[...S.week];w[6]=cnt();const max=Math.max(4,S.habits.length);
+ const best=Math.max(0,...S.habits.map(h=>h.streak));
+ return `<div class="eyebrow">This week</div><h1>Progress</h1>
+ <div class="card" style="margin-top:16px"><b>Habits completed</b>
+  <div class="week">${w.map((v,i)=>`<div class="${i===6?'today':''}"><i style="height:${v/max*100}%"></i>${days[i]}</div>`).join('')}</div></div>
+ <div class="stats"><div class="card"><b>${best}</b><span>Best streak (days)</span></div>
+ <div class="card"><b>${w.reduce((a,b)=>a+b,0)}</b><span>Check-ins this week</span></div></div>`}
+function nomiTab(){const xp=S.week.reduce((a,b)=>a+b,0)+cnt()*10;const lvl=Math.floor(xp/15)+1;
+ return `<div class="eyebrow">Your companion</div><h1>Meet Nomi</h1>
+ <div style="display:grid;justify-items:center;margin:20px 0"><div style="transform:scale(1.6);margin:30px 0">${nomi(face())}</div>
+ <div class="bubble" style="flex:none;text-align:center;border-radius:18px">${say()}</div></div>
+ <div class="card"><b>Level ${lvl}</b><div class="ring" style="margin:10px 0 0"><div class="bar"><i style="width:${xp%15/15*100}%"></i></div><span class="eyebrow">${xp%15}/15</span></div>
+ <div class="acc"><span class="tag">Sprout hat</span><span class="tag ${lvl<3?'lock':''}">Scarf ${lvl<3?'(Lv 3)':''}</span><span class="tag ${lvl<5?'lock':''}">Crown ${lvl<5?'(Lv 5)':''}</span></div></div>`}
+function sheet(){return `<div class="sheet" id="sh"><div role="dialog" aria-label="New habit"><h2>New habit</h2>
+ <input type="text" id="nm" placeholder="e.g. Journal for 5 minutes" aria-label="Habit name">
+ <div class="chips">${['⭐','✍️','🍎','😴','🎧','🌿'].map(e=>`<button class="chip" data-e="${e}" aria-pressed="${e===S.icon}">${e}</button>`).join('')}</div>
+ <button class="btn" id="save">Add habit</button><button class="btn ghost" id="cancel">Cancel</button></div></div>`}
+function render(){
+ $('#screen').innerHTML={today,progress,nomi:nomiTab}[S.tab]();
+ document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.t===S.tab));
+ $('#fab').hidden=S.tab!=='today';
+ document.querySelectorAll('.sheet,.toast').forEach(e=>e.remove());
+ if(S.sheet)$('#app').insertAdjacentHTML('beforeend',sheet());
+ if(S.toast)$('#app').insertAdjacentHTML('beforeend',`<div class="toast" role="status">${S.toast}</div>`);
+}
+function toast(m){S.toast=m;render();setTimeout(()=>{S.toast='';document.querySelector('.toast')?.remove()},1800)}
+$('#app').addEventListener('click',e=>{
+ const h=e.target.closest('.habit'),t=e.target.closest('.tab'),c=e.target.closest('.chip');
+ if(h){const x=S.habits.find(x=>x.id==h.dataset.id);x.done=!x.done;x.streak+=x.done?1:-1;render();
+   if(x.done&&cnt()===S.habits.length)toast('All habits done. Nomi is thrilled!')}
+ else if(t){S.tab=t.dataset.t;render()}
+ else if(e.target.id==='fab'){S.sheet=true;render();$('#nm').focus()}
+ else if(c){S.icon=c.dataset.e;document.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x===c))}
+ else if(e.target.id==='cancel'||e.target.id==='sh'){S.sheet=false;render()}
+ else if(e.target.id==='save'){const v=$('#nm').value.trim();
+   if(!v){$('#nm').focus();return}
+   S.habits.push({id:Date.now(),icon:S.icon,name:v,sub:'Daily',done:false,streak:0});S.sheet=false;render();toast('Habit added')}
+});
+render();
+</script>
