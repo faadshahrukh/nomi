@@ -2,6 +2,7 @@ export * from './Text';
 export * from './Icon';
 export * from './Money';
 export * from './Surface';
+export * from './Tile';
 export * from './Button';
 export * from './IconButton';
 export * from './Chip';

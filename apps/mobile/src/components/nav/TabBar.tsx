@@ -7,12 +7,12 @@ import { Icon, type IconName, Text } from '@/components/ui';
 
 export const TAB_BAR_HEIGHT = 64;
 
-export const TABS: Array<{ name: string; href: '/' | '/transactions' | '/insights' | '/planning' | '/more'; label: string; icon: IconName }> = [
+export const TABS: Array<{ name: string; href: '/' | '/transactions' | '/insights' | '/planning' | '/profile'; label: string; icon: IconName }> = [
   { name: 'home', href: '/', label: 'Home', icon: 'home' },
   { name: 'transactions', href: '/transactions', label: 'Transactions', icon: 'list' },
   { name: 'insights', href: '/insights', label: 'Insights', icon: 'insights' },
   { name: 'planning', href: '/planning', label: 'Planning', icon: 'planning' },
-  { name: 'more', href: '/more', label: 'More', icon: 'more' },
+  { name: 'profile', href: '/profile', label: 'Profile', icon: 'user' },
 ];
 
 export function TabBarContainer({ children, style, ...rest }: ViewProps) {

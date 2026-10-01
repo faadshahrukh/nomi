@@ -36,3 +36,21 @@ export function weekdayDate(date: LocalDate, today: LocalDate): string {
   const { y, m, d } = parseLocalDate(date);
   return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${shortDate(date, today)}`;
 }
+
+/** "Oct 28" */
+export function monthDay(date: LocalDate): string {
+  const { m, d } = parseLocalDate(date);
+  return `${MONTHS[m - 1]} ${d}`;
+}
+
+/** "Thursday, Oct 24" for the Home header. */
+export function friendlyDate(date: LocalDate): string {
+  const { y, m, d } = parseLocalDate(date);
+  const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return `${names[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}, ${MONTHS[m - 1]} ${d}`;
+}
+
+/** Today, or "Oct 23". For compact lists. */
+export function recentLabel(date: LocalDate, today: LocalDate): string {
+  return date === today ? 'Today' : monthDay(date);
+}

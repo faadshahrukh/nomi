@@ -9,33 +9,50 @@ export interface ColorTokens {
   ink: string;           // primary text
   inkMuted: string;      // secondary text
   border: string;
-  accent: string;        // the single brand colour: capture, primary actions
+  accent: string;        // the single brand colour (deep green): mic, primary actions, active tab
   onAccent: string;
-  accentSoft: string;    // tinted backgrounds for accent-related content
+  accentSoft: string;    // mint tint: capture and Safe to Spend cards, soft highlights
   onAccentSoft: string;
+  forest: string;        // the dark hero card (Money Pulse)
+  onForest: string;
+  onForestMuted: string;
+  forestPositive: string; // positive figures on the forest card
   positive: string; positiveSoft: string;
-  caution: string; cautionSoft: string;
+  caution: string; cautionSoft: string; // warm orange: Nomi Signal and "watch" states
   negative: string; negativeSoft: string;
+  /** Pastel icon tiles for categories. Each pair is (background, icon colour). */
+  tileMint: string; onTileMint: string;
+  tileLav: string; onTileLav: string;
+  tileSky: string; onTileSky: string;
+  tilePeach: string; onTilePeach: string;
+  tileSand: string; onTileSand: string;
+  tileRose: string; onTileRose: string;
   scrim: string;         // modal backdrop
 }
 
 export const lightColors: ColorTokens = {
-  bg: '#F4F6F9', surface: '#FFFFFF', surfaceSunken: '#E9EDF3',
-  ink: '#0E1726', inkMuted: '#4B5A73', border: '#D9E0EA',
-  accent: '#2450F0', onAccent: '#FFFFFF', accentSoft: '#E3EAFF', onAccentSoft: '#1B3DB8',
-  positive: '#0B6B45', positiveSoft: '#DCF2E7',
-  caution: '#8A5200', cautionSoft: '#FDEFD3',
+  bg: '#F7F8F5', surface: '#FFFFFF', surfaceSunken: '#EDF2EE',
+  ink: '#0F241C', inkMuted: '#566860', border: '#E2E9E4',
+  accent: '#0F5A44', onAccent: '#FFFFFF', accentSoft: '#E1F3E9', onAccentSoft: '#0E4A38',
+  forest: '#0E3F33', onForest: '#FFFFFF', onForestMuted: '#B9D6CA', forestPositive: '#8FE3BC',
+  positive: '#17794F', positiveSoft: '#DDF3E6',
+  caution: '#9A4A12', cautionSoft: '#FDEBDD',
   negative: '#B3261E', negativeSoft: '#FBE4E2',
-  scrim: 'rgba(8, 14, 26, 0.45)',
+  tileMint: '#DDF3E6', onTileMint: '#17794F', tileLav: '#E9E6FA', onTileLav: '#5446B8', tileSky: '#DFEDFA', onTileSky: '#1D5C99',
+  tilePeach: '#FDEBDD', onTilePeach: '#9A4A12', tileSand: '#F3EEDC', onTileSand: '#74601A', tileRose: '#FBE3EA', onTileRose: '#A32A4B',
+  scrim: 'rgba(6, 18, 13, 0.45)',
 };
 
 export const darkColors: ColorTokens = {
-  bg: '#0A0F1A', surface: '#131B2B', surfaceSunken: '#0E1524',
-  ink: '#EDF1F8', inkMuted: '#9CABC3', border: '#26324B',
-  accent: '#8AA2FF', onAccent: '#0A1230', accentSoft: '#1B2753', onAccentSoft: '#B8C7FF',
-  positive: '#5FD3A0', positiveSoft: '#11332A',
-  caution: '#F2B84B', cautionSoft: '#3A2B0E',
+  bg: '#09130F', surface: '#111F19', surfaceSunken: '#0C1813',
+  ink: '#E6F1EA', inkMuted: '#91A79C', border: '#1F3028',
+  accent: '#5FD6A5', onAccent: '#05261A', accentSoft: '#143A2D', onAccentSoft: '#A9E8CB',
+  forest: '#143F33', onForest: '#FFFFFF', onForestMuted: '#A9C9BB', forestPositive: '#8FE3BC',
+  positive: '#5FD6A5', positiveSoft: '#123428',
+  caution: '#F0A867', cautionSoft: '#3A2414',
   negative: '#FF8F86', negativeSoft: '#3D1C1A',
+  tileMint: '#143A2D', onTileMint: '#7FE0B5', tileLav: '#262345', onTileLav: '#B3A9FF', tileSky: '#12304A', onTileSky: '#8CC4F5',
+  tilePeach: '#3A2414', onTilePeach: '#F0A867', tileSand: '#34301A', onTileSand: '#E4CF7A', tileRose: '#3D1C28', onTileRose: '#F59AB5',
   scrim: 'rgba(0, 0, 0, 0.6)',
 };
 

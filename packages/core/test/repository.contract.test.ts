@@ -88,8 +88,9 @@ describe.each(makers)('%s repository contract', (_name, make) => {
 describe('sqlite-specific guarantees', () => {
   it('stores the AI-processing choice, defaulting to on', async () => {
     const repo = await sqlRepo();
-    const base = { userId: USER, country: 'BD', currency: 'BDT', timezone: 'Asia/Dhaka', locale: 'mixed' as const, confirmationPref: 'always_confirm' as const, highImpactMinor: 1, safetyBufferMinor: 0, retainRawInput: false, defaultAccountId: null };
+    const base = { userId: USER, country: 'BD', currency: 'BDT', timezone: 'Asia/Dhaka', locale: 'mixed' as const, confirmationPref: 'always_confirm' as const, highImpactMinor: 1, safetyBufferMinor: 0, retainRawInput: false, defaultAccountId: null, displayName: 'Sam' };
     await repo.putProfile(USER, { ...base, aiProcessing: true });
+    expect((await repo.getProfile(USER))!.displayName).toBe('Sam');
     expect((await repo.getProfile(USER))!.aiProcessing).toBe(true);
     await repo.putProfile(USER, { ...base, aiProcessing: false });
     expect((await repo.getProfile(USER))!.aiProcessing).toBe(false);

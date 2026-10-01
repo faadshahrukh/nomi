@@ -36,6 +36,12 @@ export function accountBalance(account: Account, transactions: Transaction[]): n
   return transactions.reduce((sum, tx) => sum + effectOnAccount(tx, account.id), account.openingBalanceMinor);
 }
 
+/** Liquid (spendable) balance as of the end of `date`, from the same rules as every other balance. */
+export function liquidBalanceOn(data: Pick<LedgerData, 'accounts' | 'transactions'>, date: string): number {
+  const upto = data.transactions.filter((t) => t.localDate <= date);
+  return data.accounts.filter((a) => a.includeInLiquid && !a.archivedAt).reduce((s, a) => s + accountBalance(a, upto), 0);
+}
+
 export function accountBalances(data: Pick<LedgerData, 'accounts' | 'transactions'>): Map<Id, number> {
   return new Map(data.accounts.map((a) => [a.id, accountBalance(a, data.transactions)]));
 }

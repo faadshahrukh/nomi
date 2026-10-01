@@ -6,15 +6,18 @@ import { useAuth } from '@/auth/AuthProvider';
 import { config } from '@/config';
 import { useLedger } from '@/data/LedgerProvider';
 import type { DataMode } from '@/data/repositories';
-import { ListRow, Screen, ScreenTitle, SectionHeader, Segmented, Surface, Text, useToast } from '@/components/ui';
+import { Icon, ListRow, Screen, SectionHeader, Segmented, Surface, Text, useToast } from '@/components/ui';
+import { radius } from '@/design/tokens';
 
 export const SHOW_DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_DEV_TOOLS === '1';
 
-export default function More() {
+export default function Profile() {
   const { preference, setPreference } = useTheme();
   const toast = useToast();
   const router = useRouter();
   const { mode, setMode, state, updateProfile } = useLedger();
+  const { colors } = useTheme();
+  const name = state.status === 'ready' ? state.snapshot.profile.displayName : null;
   const auth = useAuth();
   const aiOn = state.status === 'ready' ? state.snapshot.profile.aiProcessing : true;
   const aiStatus = !config.backendConfigured ? "AI understanding isn't set up in this build, so messages are understood on this device."
@@ -24,7 +27,15 @@ export default function More() {
   const later = (what: string) => () => toast.show({ message: `${what} isn't built yet.`, tone: 'info' });
   return (
     <Screen>
-      <ScreenTitle title="More" subtitle="Settings and tools" />
+      <Surface padding="lg" rounded="xl" style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
+        <View style={{ width: 56, height: 56, borderRadius: radius.pill, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+          {name ? <Text variant="title" style={{ color: colors.onAccentSoft }}>{name.slice(0, 1).toUpperCase()}</Text> : <Icon name="user" size={26} color={colors.onAccentSoft} />}
+        </View>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Text variant="heading" weight="bold" accessibilityRole="header" numberOfLines={1}>{name ?? 'Your profile'}</Text>
+          <Text variant="callout" tone="muted" numberOfLines={1}>{auth.session?.user.email ?? (auth.status === 'signedIn' ? 'Signed in' : 'Not signed in. Your data stays on this device.')}</Text>
+        </View>
+      </Surface>
 
       <View style={{ gap: space.xs }}>
         <SectionHeader title="Appearance" />

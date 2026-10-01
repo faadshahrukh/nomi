@@ -10,7 +10,7 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 
 | Area | State |
 |---|---|
-| Deterministic finance core (`packages/core`) | **Built and tested** (188 tests, including the real SQL run against SQLite and the server schema run on real Postgres) |
+| Deterministic finance core (`packages/core`) | **Built and tested** (192 tests, including the real SQL run against SQLite and the server schema run on real Postgres) |
 | On-device storage (SQLite), demo data, Home summary | **Built**. Native only; web preview uses an in-memory store |
 | AI interpretation contract, validation, confirmation policy | **Built and tested**. An on-device rule-based interpreter is the live interpreter; the Claude adapter is not built |
 | Text capture end to end (type, review, correct, save, undo) | **Built** in the app |

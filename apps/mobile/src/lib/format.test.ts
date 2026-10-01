@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { monthRangeLabel, pastDayLabel, shortDate, upcomingLabel, weekdayDate } from './format';
+import { friendlyDate, monthDay, monthRangeLabel, pastDayLabel, recentLabel, shortDate, upcomingLabel, weekdayDate } from './format';
 
 describe('date labels', () => {
   it('labels past days', () => {
@@ -22,5 +22,12 @@ describe('date labels', () => {
   it('names the weekday for pickers', () => {
     expect(weekdayDate('2025-03-15', '2025-03-15')).toBe('Sat 15 Mar');
     expect(weekdayDate('2025-03-10', '2025-03-15')).toBe('Mon 10 Mar');
+  });
+  it('formats the compact labels used on Home', () => {
+    expect(friendlyDate('2025-10-24')).toBe('Friday, Oct 24');
+    expect(friendlyDate('2025-03-15')).toBe('Saturday, Mar 15');
+    expect(monthDay('2025-10-28')).toBe('Oct 28');
+    expect(recentLabel('2025-10-24', '2025-10-24')).toBe('Today');
+    expect(recentLabel('2025-10-23', '2025-10-24')).toBe('Oct 23');
   });
 });

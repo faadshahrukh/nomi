@@ -64,6 +64,10 @@ UI, data model, business logic, persistence, loading/error/empty/offline states,
 - Voice is still a placeholder: the mic shows "Voice capture isn't built yet".
 - Known gaps: saved transactions cannot be edited or deleted from the ledger yet (milestone 8; Undo works right after saving); the rule-based interpreter is narrower than a language model; categories cannot be created in the editor; shared-expense splits other than equal cannot be edited by hand yet; capture needs an account, so a brand-new real ledger still needs onboarding (milestone 6).
 
+## Design pass (between milestones 5 and 6)
+
+The product owner's Home design was applied: new palette and tokens, gradient surfaces, category icon tiles, redesigned Home with Money Pulse, Safe to Spend (per-day first), a conditional Nomi Signal, Upcoming and Recent Activity, and the Profile tab. Data it needed was added to the core: `liquidBalanceOn`, the balance change versus a month ago, the signal, and the profile display name (device migration 3 and server migration `20250101000200`). What was deliberately not copied, and why, is listed in `DESIGN_SYSTEM.md`.
+
 ## Milestone 5 notes
 
 - Built: the Postgres schema with row-level security and its real-Postgres test suite; the Claude interpreter, its Edge Function and the app's client, with on-device fallback; the sign-in adapter (email + Google), secure session storage and not-configured stand-in; the AI-processing privacy setting end to end (device, server, Settings screen); the "Understood with AI / on this device" label.

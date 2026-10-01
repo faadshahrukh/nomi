@@ -1,7 +1,7 @@
-import { addDays, endOfMonth, startOfMonth, type LocalDate } from './dates';
+import { addDays, addMonths, endOfMonth, startOfMonth, type LocalDate } from './dates';
 import { budgetStatus, type BudgetStatus } from './budgets';
 import { goalSavedMinor } from './goals';
-import { incomeTotal, netSpending } from './ledger';
+import { incomeTotal, liquidBalanceOn, netSpending } from './ledger';
 import { occurrences, upcomingObligations, type UpcomingItem } from './recurring';
 import { safeToSpend, type SafeToSpend } from './safeToSpend';
 import { whatChanged, type WhatChanged } from './whatChanged';
@@ -17,6 +17,13 @@ export interface RecentItem {
   /** Signed effect on the user's money for display: income +, expense -, 0 for transfers. */
   direction: 'in' | 'out' | 'neutral';
 }
+
+export interface Signal {
+  categoryId: string | null; ratio: number; currentMinor: number; baselineMinor: number; deltaMinor: number; transactionIds: string[];
+}
+
+/** A category must run at least this far above its usual pace to be called out. */
+export const SIGNAL_MIN_RATIO = 0.1;
 
 export interface GoalProgress {
   goal: Goal; savedMinor: number; ratio: number;
@@ -38,7 +45,14 @@ export interface HomeSummary {
     savedMinor: number; goalsTargetMinor: number;
     /** Comparison with the previous-months pace, only when there is enough history. */
     vsUsual: { deltaMinor: number; deltaRatio: number; direction: 'higher' | 'lower' | 'similar' } | null;
+    /** Available balance now vs the same day one month ago. Null until a full month of history exists, or if that balance was not positive. */
+    balanceChange: { previousMinor: number; ratio: number } | null;
   };
+  /**
+   * The one thing worth pointing out today: the largest category running clearly above its usual pace.
+   * Null when nothing qualifies, so the card simply does not appear (no filler, no alerts for the sake of it).
+   */
+  signal: Signal | null;
   safeToSpend: SafeToSpend;
   whatChanged: WhatChanged;
   budgets: BudgetStatus[];
@@ -82,7 +96,9 @@ export function buildHomeSummary(snap: LedgerSnapshot, today: LocalDate): HomeSu
       budgetLeftMinor: overall ? overall.remainingMinor : null,
       savedMinor: snap.goals.reduce((s, g) => s + goalSavedMinor(g, txs), 0), goalsTargetMinor: snap.goals.reduce((s, g) => s + g.targetMinor, 0),
       vsUsual: wc.status === 'ok' ? { deltaMinor: wc.deltaMinor, deltaRatio: wc.deltaRatio, direction: wc.direction } : null,
+      balanceChange: balanceChange(snap, txs, today),
     },
+    signal: signalFrom(wc),
     safeToSpend: sts, whatChanged: wc, budgets,
     upcoming: upcomingObligations(snap.recurringRules, txs, today, addDays(today, UPCOMING_WINDOW_DAYS)),
     recent,
@@ -125,3 +141,20 @@ export function filterTransactions(items: RecentItem[], filter: TransactionFilte
   return items.filter((i) => keep(i.transaction));
 }
 
+
+function balanceChange(snap: LedgerSnapshot, txs: Transaction[], today: LocalDate): { previousMinor: number; ratio: number } | null {
+  if (!txs.length) return null;
+  const start = txs.reduce((min, t) => (t.localDate < min ? t.localDate : min), txs[0]!.localDate);
+  const prevDate = addMonths(today, -1);
+  if (prevDate < start) return null; // not tracked back far enough for a fair comparison
+  const previous = liquidBalanceOn({ accounts: snap.accounts, transactions: txs }, prevDate);
+  if (previous <= 0) return null;
+  const now = liquidBalanceOn({ accounts: snap.accounts, transactions: txs }, today);
+  return { previousMinor: previous, ratio: (now - previous) / previous };
+}
+
+function signalFrom(wc: WhatChanged): Signal | null {
+  if (wc.status !== 'ok' || wc.direction !== 'higher') return null;
+  const d = wc.drivers.find((x) => x.baselineMinor > 0 && x.deltaMinor / x.baselineMinor >= SIGNAL_MIN_RATIO);
+  return d ? { categoryId: d.categoryId, ratio: d.deltaMinor / d.baselineMinor, currentMinor: d.currentMinor, baselineMinor: d.baselineMinor, deltaMinor: d.deltaMinor, transactionIds: d.transactionIds } : null;
+}

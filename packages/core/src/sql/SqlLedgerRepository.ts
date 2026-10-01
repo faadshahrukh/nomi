@@ -41,12 +41,12 @@ export class SqlLedgerRepository implements LedgerRepository {
     const [r] = await this.db.all<Row>('SELECT * FROM profiles WHERE user_id = ?', [userId]);
     return r ? { userId: s(r.user_id!), country: s(r.country!), currency: s(r.currency!), timezone: s(r.timezone!), locale: s(r.locale!) as Profile['locale'],
       confirmationPref: s(r.confirmation_pref!) as Profile['confirmationPref'], highImpactMinor: n(r.high_impact_minor!), safetyBufferMinor: n(r.safety_buffer_minor!),
-      retainRawInput: b(r.retain_raw_input!), defaultAccountId: sn(r.default_account_id!), aiProcessing: b(r.ai_processing!) } : null;
+      retainRawInput: b(r.retain_raw_input!), defaultAccountId: sn(r.default_account_id!), aiProcessing: b(r.ai_processing!), displayName: sn(r.display_name!) } : null;
   }
   async putProfile(userId: Id, p: Profile) {
     own(userId, p.userId);
-    await this.db.run(`INSERT OR REPLACE INTO profiles (user_id, country, currency, timezone, locale, confirmation_pref, high_impact_minor, safety_buffer_minor, retain_raw_input, default_account_id, ai_processing)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`, [p.userId, p.country, p.currency, p.timezone, p.locale, p.confirmationPref, p.highImpactMinor, p.safetyBufferMinor, p.retainRawInput ? 1 : 0, p.defaultAccountId, p.aiProcessing ? 1 : 0]);
+    await this.db.run(`INSERT OR REPLACE INTO profiles (user_id, country, currency, timezone, locale, confirmation_pref, high_impact_minor, safety_buffer_minor, retain_raw_input, default_account_id, ai_processing, display_name)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, [p.userId, p.country, p.currency, p.timezone, p.locale, p.confirmationPref, p.highImpactMinor, p.safetyBufferMinor, p.retainRawInput ? 1 : 0, p.defaultAccountId, p.aiProcessing ? 1 : 0, p.displayName]);
   }
 
   async listAccounts(userId: Id): Promise<Account[]> {

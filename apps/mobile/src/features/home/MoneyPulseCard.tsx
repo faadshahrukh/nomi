@@ -1,47 +1,60 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import type { HomeSummary } from '@nomi/core';
-import { space } from '@/design/tokens';
-import { Badge, Money, ProgressBar, Surface, Text } from '@/components/ui';
+import { radius, space } from '@/design/tokens';
+import { Icon, Money, Surface, Text, type IconName } from '@/components/ui';
 
-function Stat({ label, minor, currency, tone }: { label: string; minor: number; currency: string; tone?: 'ink' | 'positive' }) {
+function Stat({ icon, label, minor, currency }: { icon: IconName; label: string; minor: number; currency: string }) {
   return (
-    <View style={{ flex: 1, minWidth: 0, gap: space.xxs }}>
-      <Text variant="caption" tone="muted" numberOfLines={1}>{label}</Text>
-      <Money minor={minor} currency={currency} size="medium" tone={tone ?? 'ink'} rounding="nearest" />
+    <View style={{ flex: 1, minWidth: 0, gap: space.sm }}>
+      <View style={{ width: 34, height: 34, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={17} color="#FFFFFF" />
+      </View>
+      <View style={{ gap: 2 }}>
+        <Text variant="caption" tone="onForestMuted" numberOfLines={1}>{label}</Text>
+        <Money minor={minor} currency={currency} size="medium" tone="onForest" rounding="nearest" />
+      </View>
     </View>
   );
 }
 
 /** "How am I doing right now?" Figures come from the core's HomeSummary; this component only lays them out. */
-export function MoneyPulseCard({ summary }: { summary: HomeSummary }) {
+export function MoneyPulseCard({ summary, onDetails }: { summary: HomeSummary; onDetails: () => void }) {
   const p = summary.pulse, c = summary.currency;
-  const savedRatio = p.goalsTargetMinor > 0 ? p.savedMinor / p.goalsTargetMinor : 0;
-  const v = p.vsUsual;
+  const change = p.balanceChange ? Math.round(p.balanceChange.ratio * 100) : null;
   return (
-    <Surface padding="xl" rounded="lg" style={{ gap: space.lg }}>
-      <View style={{ gap: space.xs }}>
-        <Text variant="caption" tone="muted">Available balance</Text>
-        <Money minor={p.availableMinor} currency={c} size="hero" rounding="nearest" />
-      </View>
-      <View style={{ flexDirection: 'row', gap: space.md }}>
-        <Stat label="Spent this month" minor={p.spentMinor} currency={c} />
-        <Stat label="Income" minor={p.incomeMinor} currency={c} tone="positive" />
-        {p.budgetLeftMinor !== null ? <Stat label="Budget left" minor={p.budgetLeftMinor} currency={c} /> : <Stat label="Net cash flow" minor={p.netFlowMinor} currency={c} />}
-      </View>
-      {v && v.direction !== 'similar' ? (
-        <View style={{ gap: space.xs }}>
-          <Badge tone={v.direction === 'higher' ? 'caution' : 'positive'} icon="insights" label={v.direction === 'higher' ? 'Higher than your usual pace' : 'Lower than your usual pace'} />
+    <Surface variant="forest" padding="xl" rounded="xl" style={{ gap: space.xl }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <Icon name="insights" size={18} color="#FFFFFF" />
+          <Text variant="bodyStrong" tone="onForest" accessibilityRole="header">Money Pulse</Text>
         </View>
-      ) : v ? <Badge tone="positive" icon="check" label="In line with your usual pace" /> : null}
-      {p.goalsTargetMinor > 0 ? (
-        <View style={{ gap: space.sm }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
-            <Text variant="callout" tone="muted">Savings goals</Text>
-            <Text variant="callout" numeric>{Math.round(savedRatio * 100)}%</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="View details" onPress={onDetails} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+          <Text variant="caption" weight="semibold" tone="onForest">View details</Text>
+          <Icon name="chevronRight" size={14} color="#FFFFFF" />
+        </Pressable>
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+          <Money minor={p.availableMinor} currency={c} size="hero" tone="onForest" rounding="nearest" />
+          <Text variant="callout" tone="onForestMuted">Available balance</Text>
+        </View>
+        {change !== null ? (
+          <View accessible accessibilityLabel={`Balance ${change >= 0 ? 'up' : 'down'} ${Math.abs(change)} percent compared with this day last month`} style={{ alignItems: 'flex-end', gap: 2, paddingBottom: space.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+              <Icon name={change >= 0 ? 'trendUp' : 'arrowDown'} size={16} color={change >= 0 ? '#8FE3BC' : '#B9D6CA'} />
+              <Text variant="bodyStrong" tone={change >= 0 ? 'forestPositive' : 'onForestMuted'} numeric>{change >= 0 ? '+' : '−'}{Math.abs(change)}%</Text>
+            </View>
+            <Text variant="caption" tone="onForestMuted">vs last month</Text>
           </View>
-          <ProgressBar value={savedRatio} label={`Savings goals, ${Math.round(savedRatio * 100)} percent saved`} />
-        </View>
-      ) : null}
+        ) : null}
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: space.md, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.14)', paddingTop: space.lg }}>
+        <Stat icon="cart" label="Spent" minor={p.spentMinor} currency={c} />
+        <Stat icon="arrowDown" label="Income" minor={p.incomeMinor} currency={c} />
+        {p.budgetLeftMinor !== null ? <Stat icon="wallet" label="Budget left" minor={p.budgetLeftMinor} currency={c} /> : <Stat icon="trendUp" label="Net flow" minor={p.netFlowMinor} currency={c} />}
+      </View>
     </Surface>
   );
 }

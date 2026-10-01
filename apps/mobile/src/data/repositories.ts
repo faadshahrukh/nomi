@@ -22,7 +22,7 @@ export const defaultDataMode = (): DataMode =>
 /** Profile used before onboarding has saved one. Not persisted. */
 export function fallbackProfile(userId: string): Profile {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Dhaka';
-  return { userId, country: 'BD', currency: 'BDT', timezone: tz, locale: 'mixed', confirmationPref: 'always_confirm', highImpactMinor: 1_000_000, safetyBufferMinor: 0, retainRawInput: false, defaultAccountId: null, aiProcessing: true };
+  return { userId, country: 'BD', currency: 'BDT', timezone: tz, locale: 'mixed', confirmationPref: 'always_confirm', highImpactMinor: 1_000_000, safetyBufferMinor: 0, retainRawInput: false, defaultAccountId: null, aiProcessing: true, displayName: null };
 }
 
 const cache = new Map<DataMode, Promise<LedgerRepository>>();

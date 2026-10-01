@@ -23,7 +23,7 @@ export default function Gallery() {
   return (
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-        <IconButton icon="chevronLeft" label="Back" variant="tonal" onPress={() => (router.canGoBack() ? router.back() : router.replace('/more'))} />
+        <IconButton icon="chevronLeft" label="Back" variant="tonal" onPress={() => (router.canGoBack() ? router.back() : router.replace('/profile'))} />
         <Text variant="overline" tone="muted">Developer</Text>
       </View>
       <ScreenTitle title="Component gallery" subtitle="Switch the theme in More. Colours below follow the active theme." />

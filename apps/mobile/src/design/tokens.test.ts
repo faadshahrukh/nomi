@@ -10,6 +10,11 @@ const pairs: Array<[keyof ColorTokens, keyof ColorTokens, number]> = [
   ['positive', 'positiveSoft', 4.5], ['caution', 'cautionSoft', 4.5], ['negative', 'negativeSoft', 4.5],
   ['positive', 'surface', 4.5], ['caution', 'surface', 4.5], ['negative', 'surface', 4.5],
   ['positive', 'bg', 4.5], ['caution', 'bg', 4.5], ['negative', 'bg', 4.5],
+  ['onForest', 'forest', 7], ['onForestMuted', 'forest', 4.5], ['forestPositive', 'forest', 4.5],
+  ['accent', 'accentSoft', 4.5], ['caution', 'surface', 4.5],
+  ['onTileMint', 'tileMint', 4.5], ['onTileLav', 'tileLav', 4.5], ['onTileSky', 'tileSky', 4.5],
+  ['onTilePeach', 'tilePeach', 4.5], ['onTileSand', 'tileSand', 4.5], ['onTileRose', 'tileRose', 4.5],
+  ['inkMuted', 'accentSoft', 4.5], ['ink', 'accentSoft', 7], ['ink', 'cautionSoft', 7],
 ];
 
 describe.each([['light', lightColors], ['dark', darkColors]] as const)('%s palette contrast', (_name, c) => {

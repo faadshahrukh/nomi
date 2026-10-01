@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_CATEGORIES, DEMO_USER_ID, describeTransactions, filterTransactions, accountBalance, buildDemoData, buildHomeSummary, budgetStatus, floorToWhole, formatMoney, roundToWhole, seedDemoData,
+  DEFAULT_CATEGORIES, DEMO_USER_ID, describeTransactions, filterTransactions, liquidBalanceOn, accountBalance, buildDemoData, buildHomeSummary, budgetStatus, floorToWhole, formatMoney, roundToWhole, seedDemoData,
   seedSystemCategories, upcomingObligations, validateTransaction, type LedgerSnapshot,
 } from '../src';
 import { tx } from './fixtures';
@@ -164,5 +164,37 @@ describe('ledger list and filters', () => {
     expect(emergency.ratio).toBeCloseTo(emergency.savedMinor / emergency.goal.targetMinor);
     expect(s.recurring.map((r) => r.rule.name)).toEqual(['Electricity', 'Streaming', 'Rent', 'Internet']); // by next due date
     expect(s.recurring[0]!.nextDate).toBe('2025-03-18');
+  });
+});
+
+describe('home extras: balance trend and signal', () => {
+  const d = snapshotOf();
+  it('compares the balance with the same day last month, and only with enough history', () => {
+    const s = buildHomeSummary(d, TODAY);
+    expect(s.pulse.balanceChange).not.toBeNull();
+    const prev = liquidBalanceOn({ accounts: d.accounts, transactions: d.transactions }, '2025-02-15');
+    expect(s.pulse.balanceChange!.previousMinor).toBe(prev);
+    expect(s.pulse.balanceChange!.ratio).toBeCloseTo((s.pulse.availableMinor - prev) / prev);
+    const young = { ...d, transactions: d.transactions.filter((t) => t.localDate >= '2025-03-01') };
+    expect(buildHomeSummary(young, TODAY).pulse.balanceChange).toBeNull();
+    expect(buildHomeSummary({ ...d, transactions: [] }, TODAY).pulse.balanceChange).toBeNull();
+  });
+  it('liquid balance on a date ignores later transactions and non-liquid accounts', () => {
+    const all = liquidBalanceOn({ accounts: d.accounts, transactions: d.transactions }, '2099-01-01');
+    expect(all).toBe(buildHomeSummary(d, TODAY).pulse.availableMinor);
+    expect(liquidBalanceOn({ accounts: d.accounts, transactions: d.transactions }, '1999-01-01')).toBe(3 * 0 + 400_000 + 1_500_000 + 800_000); // opening balances of cash, bank, bKash; savings excluded
+  });
+  it('names the biggest category running well above its usual pace, with the numbers behind it', () => {
+    const s = buildHomeSummary(d, TODAY);
+    expect(s.signal).not.toBeNull();
+    expect(s.signal!.categoryId).toBe('cat.food');
+    expect(s.signal!.ratio).toBeGreaterThanOrEqual(0.1);
+    expect(s.signal!.deltaMinor).toBe(s.signal!.currentMinor - s.signal!.baselineMinor);
+    expect(s.signal!.transactionIds.length).toBeGreaterThan(0);
+  });
+  it('shows no signal when spending is steady, early in the month, or lower than usual', () => {
+    expect(buildHomeSummary(d, '2025-03-05').signal).toBeNull(); // too early in the month
+    const calm = { ...d, transactions: d.transactions.filter((t) => t.localDate < '2025-03-01') };
+    expect(buildHomeSummary(calm, TODAY).signal).toBeNull();
   });
 });

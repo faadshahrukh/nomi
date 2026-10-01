@@ -78,6 +78,8 @@ export interface Profile {
   highImpactMinor: number; safetyBufferMinor: number; retainRawInput: boolean; defaultAccountId: Id | null;
   /** The user's privacy choice: may the text of a message be sent to the AI service to be understood? Off means on-device rules only. */
   aiProcessing: boolean;
+  /** What the app calls the user in greetings. Collected during onboarding; null until then. */
+  displayName: string | null;
 }
 
 export interface LedgerData {

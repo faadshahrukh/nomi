@@ -2,10 +2,10 @@ import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'r
 import { bengaliFamily, fontFamily, type TypeVariant, type ColorTokens, type FontWeight, type TextStyleToken, typography } from '@/design/tokens';
 import { useTheme } from '@/design/theme';
 
-export type Tone = 'ink' | 'muted' | 'accent' | 'onAccent' | 'positive' | 'caution' | 'negative';
+export type Tone = 'ink' | 'muted' | 'accent' | 'onAccent' | 'positive' | 'caution' | 'negative' | 'onForest' | 'onForestMuted' | 'forestPositive';
 
 export const toneColor = (c: ColorTokens, tone: Tone): string =>
-  ({ ink: c.ink, muted: c.inkMuted, accent: c.accent, onAccent: c.onAccent, positive: c.positive, caution: c.caution, negative: c.negative })[tone];
+  ({ ink: c.ink, muted: c.inkMuted, accent: c.accent, onAccent: c.onAccent, positive: c.positive, caution: c.caution, negative: c.negative, onForest: c.onForest, onForestMuted: c.onForestMuted, forestPositive: c.forestPositive })[tone];
 
 export interface TextProps extends RNTextProps {
   variant?: TypeVariant;
