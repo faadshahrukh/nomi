@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { formatMoney, roundToWhole, type Category, type HomeSummary } from '@nomi/core';
 import { space } from '@/design/tokens';
 import { Badge, EmptyState, Surface, Text } from '@/components/ui';
@@ -11,7 +11,7 @@ const REASONS = {
 } as const;
 
 /** States the change, the numbers and the categories behind it. It never guesses a reason. */
-export function WhatChangedCard({ summary, categories }: { summary: HomeSummary; categories: Category[] }) {
+export function WhatChangedCard({ summary, categories, onDriver }: { summary: HomeSummary; categories: Category[]; onDriver?: (categoryId: string) => void }) {
   const wc = summary.whatChanged, c = summary.currency;
   if (wc.status === 'insufficient_data') return <Surface><EmptyState compact {...REASONS[wc.reason]} /></Surface>;
   const name = (id: string | null) => categories.find((x) => x.id === id)?.name ?? 'Uncategorised';
@@ -29,12 +29,15 @@ export function WhatChangedCard({ summary, categories }: { summary: HomeSummary;
       {wc.drivers.length ? (
         <View style={{ gap: space.xs }}>
           {wc.drivers.map((d) => (
-            <View key={d.categoryId ?? 'none'} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}
-              accessible accessibilityLabel={`${name(d.categoryId)}, ${d.deltaMinor > 0 ? 'up' : 'down'} ${money(d.deltaMinor)} taka, ${d.transactionIds.length} transactions`}>
+            <Pressable key={d.categoryId ?? 'none'} disabled={!onDriver || !d.categoryId} onPress={() => d.categoryId && onDriver?.(d.categoryId)}
+              accessibilityRole={onDriver && d.categoryId ? 'button' : undefined}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md, minHeight: 40, alignItems: 'center' }}
+              accessible accessibilityLabel={`${name(d.categoryId)}, ${d.deltaMinor > 0 ? 'up' : 'down'} ${money(d.deltaMinor)} taka, ${d.transactionIds.length} transactions${onDriver && d.categoryId ? '. Opens the transactions.' : ''}`}>
               <Text variant="bodyStrong" style={{ flex: 1 }}>{name(d.categoryId)}</Text>
               <Text variant="bodyStrong" numeric>{d.deltaMinor > 0 ? '+' : '−'}{money(d.deltaMinor)}</Text>
-            </View>
+            </Pressable>
           ))}
+          {onDriver ? <Text variant="caption" tone="muted">Tap a category to see this month's transactions in it.</Text> : null}
         </View>
       ) : null}
     </Surface>

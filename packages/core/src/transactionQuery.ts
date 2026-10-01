@@ -1,7 +1,8 @@
 import { addDays, monthKey, type LocalDate } from './dates';
+import { categorySubtree } from './ledger';
 import { fromBanglaDigits } from './money';
 import { filterTransactions, type RecentItem, type TransactionFilter } from './homeSummary';
-import type { Id } from './types';
+import type { Category, Id } from './types';
 
 export type TransactionPeriod = 'all' | 'this_month' | 'last_30_days';
 
@@ -37,10 +38,14 @@ export function matchesText(item: RecentItem, text: string): boolean {
 }
 
 /** Search, type filter, account, category and period together. Input order (newest first) is preserved. */
-export function queryTransactions(items: RecentItem[], q: TransactionQuery, today: LocalDate): RecentItem[] {
+/** Pass `categories` so that choosing a category also includes its sub-categories (Food includes Dining). */
+export function queryTransactions(items: RecentItem[], q: TransactionQuery, today: LocalDate, categories?: Category[]): RecentItem[] {
   let out = filterTransactions(items, q.filter ?? 'all');
   if (q.accountId) out = out.filter((i) => i.transaction.accountId === q.accountId || i.transaction.toAccountId === q.accountId);
-  if (q.categoryId) out = out.filter((i) => i.transaction.categoryId === q.categoryId);
+  if (q.categoryId) {
+    const ids = categories ? categorySubtree(categories, q.categoryId) : new Set([q.categoryId]);
+    out = out.filter((i) => i.transaction.categoryId !== null && ids.has(i.transaction.categoryId));
+  }
   if (q.period === 'this_month') out = out.filter((i) => monthKey(i.transaction.localDate) === monthKey(today));
   if (q.period === 'last_30_days') { const from = addDays(today, -29); out = out.filter((i) => i.transaction.localDate >= from && i.transaction.localDate <= today); }
   if (q.text?.trim()) out = out.filter((i) => matchesText(i, q.text!));

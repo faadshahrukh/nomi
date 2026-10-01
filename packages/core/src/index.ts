@@ -19,4 +19,5 @@ export * from './transactionQuery';
 export * from './capture';
 export * from './regions';
 export * from './accounts';
+export * from './budgetInput';
 export * from './onboarding';

@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import type { Budget } from '@nomi/core';
 import { formatMoney } from '@nomi/core';
+import { BudgetSheet } from '@/features/planning/BudgetSheet';
 import { space } from '@/design/tokens';
 import { useLedger } from '@/data/LedgerProvider';
 import { BudgetRow } from '@/features/planning/BudgetRow';
 import { shortDate } from '@/lib/format';
-import { Chip, EmptyState, ErrorState, Money, ProgressBar, Screen, ScreenTitle, SkeletonLines, Surface, Text } from '@/components/ui';
+import { Button, Chip, EmptyState, ErrorState, Money, ProgressBar, Screen, ScreenTitle, SkeletonLines, Surface, Text } from '@/components/ui';
 
 type Section = 'Budgets' | 'Goals' | 'Recurring';
 const FREQ = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' } as const;
 
-/** Read-only for now. Creating and editing budgets, goals and recurring payments arrives with milestones 9 and 10. */
+/** Budgets can be added, changed and removed here. Goals and recurring payments are read-only until milestone 10. */
 export default function Planning() {
   const { state, retry } = useLedger();
   const [section, setSection] = useState<Section>('Budgets');
+  const [sheet, setSheet] = useState<{ open: boolean; editing: Budget | null }>({ open: false, editing: null });
   const ready = state.status === 'ready' ? state : null;
   const c = ready?.summary.currency ?? 'BDT';
 
@@ -28,8 +31,12 @@ export default function Planning() {
       {state.status === 'error' ? <ErrorState onRetry={retry} title="Couldn't load your plan" /> : null}
 
       {ready && section === 'Budgets' ? (ready.summary.budgets.length
-        ? <View style={{ gap: space.md }}>{ready.summary.budgets.map((b) => <BudgetRow key={b.budget.id} status={b} categories={ready.snapshot.categories} currency={c} />)}</View>
-        : <EmptyState icon="planning" title="No budgets yet" message="Set a monthly budget and Nomi will track it as you spend." />) : null}
+        ? <View style={{ gap: space.md }}>
+            {ready.summary.budgets.map((b) => <BudgetRow key={b.budget.id} status={b} categories={ready.snapshot.categories} currency={c} onPress={() => setSheet({ open: true, editing: b.budget })} />)}
+            <Button label="Add a budget" icon="plus" variant="secondary" onPress={() => setSheet({ open: true, editing: null })} />
+          </View>
+        : <EmptyState icon="planning" title="No budgets yet" message="Set a monthly budget and Nomi will track it as you spend." actionLabel="Add a budget" onAction={() => setSheet({ open: true, editing: null })} />) : null}
+      {ready ? <BudgetSheet visible={sheet.open} editing={sheet.editing} budgets={ready.snapshot.budgets} categories={ready.snapshot.categories} currency={ready.snapshot.profile.currency} onClose={() => setSheet({ open: false, editing: null })} /> : null}
 
       {ready && section === 'Goals' ? (ready.summary.goals.length
         ? <View style={{ gap: space.md }}>{ready.summary.goals.map((g) => (

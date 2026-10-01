@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, SectionList, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, describeTransactions, queryTransactions, type TransactionFilter, type TransactionQuery } from '@nomi/core';
 import { fontFamily, gutter, radius, space } from '@/design/tokens';
@@ -31,12 +31,19 @@ export default function Transactions() {
   const [extra, setExtra] = useState<Pick<TransactionQuery, 'period' | 'accountId' | 'categoryId'>>({ period: 'all', accountId: null, categoryId: null });
   const [sheet, setSheet] = useState(false);
   const query: TransactionQuery = { filter, text, ...extra };
+  // Arriving from Insights ("Food is up") opens the list already narrowed to that category this month.
+  const params = useLocalSearchParams<{ categoryId?: string; period?: string }>();
+  useEffect(() => {
+    if (!params.categoryId) return;
+    setFilter('all'); setText('');
+    setExtra({ period: params.period === 'this_month' ? 'this_month' : 'all', accountId: null, categoryId: params.categoryId });
+  }, [params.categoryId, params.period]);
   const nFilters = activeFilterCount(query);
   const narrowed = text.trim().length > 0 || nFilters > 0;
 
   const all = useMemo(() => (state.status === 'ready' ? describeTransactions(state.snapshot.transactions, state.snapshot.accounts, state.snapshot.categories) : []), [state]);
   const today = state.status === 'ready' ? state.summary.today : '';
-  const results = useMemo(() => queryTransactions(all, { filter, text, ...extra }, today), [all, filter, text, extra, today]);
+  const results = useMemo(() => queryTransactions(all, { filter, text, ...extra }, today, state.status === 'ready' ? state.snapshot.categories : undefined), [all, filter, text, extra, today, state]);
   const sections = useMemo(() => groupByDay(results), [results]);
   const currency = state.status === 'ready' ? state.summary.currency : 'BDT';
 

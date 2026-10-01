@@ -1,4 +1,5 @@
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { space } from '@/design/tokens';
 import { useLedger } from '@/data/LedgerProvider';
 import { WhatChangedCard } from '@/features/home/WhatChangedCard';
@@ -6,6 +7,7 @@ import { ErrorState, Screen, ScreenTitle, SectionHeader, SkeletonLines } from '@
 
 /** Only "What changed" exists so far. Patterns, categories, merchants and reports arrive in later milestones. */
 export default function Insights() {
+  const router = useRouter();
   const { state, retry } = useLedger();
   return (
     <Screen>
@@ -15,7 +17,7 @@ export default function Insights() {
       {state.status === 'ready' ? (
         <View style={{ gap: space.xs }}>
           <SectionHeader title="What changed" />
-          <WhatChangedCard summary={state.summary} categories={state.snapshot.categories} />
+          <WhatChangedCard summary={state.summary} categories={state.snapshot.categories} onDriver={(id) => router.push(`/transactions?categoryId=${id}&period=this_month`)} />
         </View>
       ) : null}
     </Screen>

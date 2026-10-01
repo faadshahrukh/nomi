@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { floorToWhole, formatMoney, type HomeSummary } from '@nomi/core';
 import { radius, space } from '@/design/tokens';
 import { useTheme } from '@/design/theme';
-import { Icon, Money, Surface, Text } from '@/components/ui';
+import { Button, Icon, Money, Surface, Text } from '@/components/ui';
 
 function Check({ label, minor, currency }: { label: string; minor: number; currency: string }) {
   const { colors } = useTheme();
@@ -29,7 +29,7 @@ function Line({ label, minor, currency, sign, strong }: { label: string; minor: 
  * Decision support, never a promise. The daily amount leads, the three things taken off are always visible, and tapping the
  * card shows the full calculation: available balance - upcoming bills - money set aside for goals - safety buffer, over the days left.
  */
-export function SafeToSpendCard({ summary }: { summary: HomeSummary }) {
+export function SafeToSpendCard({ summary, onDetails }: { summary: HomeSummary; onDetails?: () => void }) {
   const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const s = summary.safeToSpend, c = summary.currency;
@@ -74,6 +74,7 @@ export function SafeToSpendCard({ summary }: { summary: HomeSummary }) {
           <Line label="Safety buffer" minor={s.bufferMinor} currency={c} sign="−" />
           <View style={{ height: 1, backgroundColor: colors.border, marginVertical: space.xs }} />
           <Line label={`Safe to spend over ${s.daysRemaining} ${s.daysRemaining === 1 ? 'day' : 'days'}`} minor={s.availableMinor} currency={c} strong />
+          {onDetails ? <Button label="Details and safety buffer" variant="secondary" onPress={onDetails} /> : null}
           <Text variant="caption" tone="muted" style={{ paddingTop: space.sm }}>Based on your available balance, upcoming bills, current plan and remaining days. An estimate, not a guarantee.</Text>
         </View>
       ) : null}

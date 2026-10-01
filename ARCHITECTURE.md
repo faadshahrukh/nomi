@@ -55,7 +55,7 @@ Rules in force: components take values and callbacks and never compute money (th
 
 Wired: storage and derived data. `LedgerProvider` opens the repository for the current data mode, loads the whole ledger, and calls `buildHomeSummary` in the core. Screens receive finished numbers (Money Pulse, Safe to Spend with its breakdown, What Changed, budgets, goals, recurring, recent and full transaction lists, filters) and only format and lay them out. Whole-unit display rounding (`floorToWhole` for "safe" figures, `roundToWhole` for comparisons) is also in the core.
 
-Not wired yet: live backend and sync, notifications, budgets and goals creation, recurring rules creation, export and delete-my-data screens. Planning and Insights are read-only views; the transactions ledger is editable.
+Not wired yet: live backend and sync, notifications, goals and recurring rules creation, export and delete-my-data screens. Goals and recurring rules in Planning are read-only; the transactions ledger is editable.
 
 ### Data modes
 

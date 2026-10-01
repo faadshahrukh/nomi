@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { ACCOUNT_ISSUE_MESSAGES, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { ACCOUNT_ISSUE_MESSAGES, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
@@ -27,6 +27,11 @@ interface LedgerValue {
   updateProfile: (patch: Partial<Omit<Profile, 'userId'>>) => Promise<void>;
   /** Validates and saves a new account. The first account becomes the default. Returns the problems instead of throwing for bad input. */
   addAccount: (input: NewAccountInput) => Promise<{ ok: true; account: Account } | { ok: false; issues: AccountIssue[]; messages: string[] }>;
+  /** Creates or replaces the budget for a category (null = overall). Bad input comes back as messages, not an exception. */
+  saveBudget: (input: BudgetInput) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
+  deleteBudget: (id: string) => Promise<void>;
+  /** Sets how much Safe to Spend keeps untouched. Empty or 0 means no buffer. */
+  setSafetyBuffer: (text: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Sets (or replaces) the overall monthly budget. */
   setOverallBudget: (amountMinor: number) => Promise<void>;
   /** Full reload with the loading state, for the error screen's Retry button. */
@@ -115,6 +120,30 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       if (!profile.defaultAccountId) await repo.putProfile(userIdFor(mode), { ...profile, defaultAccountId: account.id, userId: userIdFor(mode) });
       await load(mode, true);
       return { ok: true, account };
+    },
+    saveBudget: async (input) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const currency = state.snapshot.profile.currency;
+      const { issues, amountMinor } = validateBudgetInput(input, state.snapshot.categories, currency);
+      if (issues.length || amountMinor === null) return { ok: false, messages: issues.map((i) => BUDGET_ISSUE_MESSAGES[i]) };
+      const repo = await openRepository(mode);
+      await repo.putBudget(userIdFor(mode), buildBudget(userIdFor(mode), () => Crypto.randomUUID(), input, amountMinor, currency, state.snapshot.budgets));
+      await load(mode, true);
+      return { ok: true };
+    },
+    deleteBudget: async (id) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      await (await openRepository(mode)).deleteBudget(userIdFor(mode), id);
+      await load(mode, true);
+    },
+    setSafetyBuffer: async (text) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const minor = parseBuffer(text, state.snapshot.profile.currency);
+      if (minor === null) return { ok: false, message: 'Enter the buffer as a number like 2000 or 2k, or leave it empty for none.' };
+      const repo = await openRepository(mode);
+      await repo.putProfile(userIdFor(mode), { ...state.snapshot.profile, safetyBufferMinor: minor, userId: userIdFor(mode) });
+      await load(mode, true);
+      return { ok: true };
     },
     setOverallBudget: async (amountMinor) => {
       if (state.status !== 'ready') throw new Error('Ledger is not ready');

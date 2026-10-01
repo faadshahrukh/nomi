@@ -47,8 +47,8 @@ export default function HomeScreen() {
       {ready && ready.summary.hasAccounts ? (
         <View style={{ gap: space.xl }}>
           <View style={{ gap: space.lg }}>
-            <MoneyPulseCard summary={ready.summary} onDetails={() => router.push('/insights')} />
-            <SafeToSpendCard summary={ready.summary} />
+            <MoneyPulseCard summary={ready.summary} onDetails={() => router.push('/money-pulse')} />
+            <SafeToSpendCard summary={ready.summary} onDetails={() => router.push('/safe-to-spend')} />
             <SignalCard summary={ready.summary} categories={ready.snapshot.categories} onDetails={() => router.push('/insights')} />
           </View>
           <View style={{ gap: space.sm }}>

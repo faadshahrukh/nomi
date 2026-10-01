@@ -40,6 +40,8 @@ describe('transaction search and filters', () => {
     expect(q(items, { accountId: 'bank' })).toHaveLength(2); // the salary and the transfer out of the bank
     expect(q(items, { accountId: 'cash' }).length).toBe(3); // two cash expenses and the transfer into cash
     expect(q(items, { categoryId: 'dining' })).toEqual(['Cafe']);
+    expect(queryTransactions(items, { categoryId: 'food' }, '2025-03-15', categories).map((i) => i.title).sort()).toEqual(['Agora', 'Cafe']); // Food includes Groceries and Dining
+    expect(queryTransactions(items, { categoryId: 'food' }, '2025-03-15').map((i) => i.title)).toEqual([]); // without the tree, only exact matches
     expect(q(items, { period: 'this_month' })).not.toContain('Cafe');
     expect(q(items, { period: 'last_30_days' })).not.toContain('Cafe');
     expect(q(items, { period: 'this_month', filter: 'expenses', text: 'agora' })).toEqual(['Agora']);
