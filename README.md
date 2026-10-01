@@ -23,7 +23,6 @@ See `DEVELOPMENT_PLAN.md` for the order of work and `ARCHITECTURE.md` for how th
 
 ```
 packages/core     Pure TypeScript domain logic. No UI, network, storage or LLM calls. Shared by mobile and the future web app.
-docs/             (reserved for diagrams)
 ARCHITECTURE.md  DATABASE_SCHEMA.md  AI_SPEC.md  DESIGN_SYSTEM.md  DEVELOPMENT_PLAN.md
 ```
 
