@@ -19,7 +19,7 @@ These are recommendations made without a pre-existing codebase. They are cheap t
 ## Layers and dependency direction
 
 ```
-UI (screens, components)         [planned]
+UI (apps/mobile: screens, components)   shell, design system, states [built]; feature screens [planned]
   ↓ calls
 Application services             TransactionService [built]; capture orchestration, sync [planned]
   ↓ uses
@@ -32,6 +32,26 @@ Adapters                         SQLite, Supabase, Claude, platform STT [planned
 ```
 
 Rules: the domain imports nothing from UI, storage, network or the LLM. UI never computes money. Adapters implement ports.
+
+## Mobile app structure (`apps/mobile`) **[built: shell only]**
+
+Expo SDK 57, Expo Router (file-based, `src/app`), TypeScript strict.
+
+```
+src/app/_layout.tsx        root: fonts, safe area, theme, network, toasts, error boundary
+src/app/(tabs)/            Home, Transactions, Insights, Planning, More  (headless expo-router/ui tabs, custom bar)
+src/app/gallery.tsx        dev-only component and state gallery
+src/design/                tokens.ts (colour, space, radius, type), theme.tsx (light/dark/system), contrast.ts
+src/components/ui/         Text, Money, Surface, Button, IconButton, Chip, Segmented, Badge, ProgressBar, Skeleton,
+                           EmptyState, ErrorState, OfflineBanner, Toast, BottomSheet, ListRow, SectionHeader, Screen, AsyncBoundary
+src/components/nav/        tab bar
+src/features/              feature code (home capture card, header)
+src/providers/             NetworkProvider
+```
+
+Rules in force: components take values and callbacks and never compute money (the `Money` component only calls `formatMoney` from the core). Every async surface goes through `AsyncBoundary` so loading, empty, error and ready are handled the same way. Tabs stay mounted after first visit. The root layout centres the app in a phone-width column on wide screens.
+
+Not wired yet: persistence, auth, capture, any real data. Home shows first-run empty states, and the capture box shows a "not connected yet" toast.
 
 ## Money and time
 

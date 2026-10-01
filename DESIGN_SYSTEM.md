@@ -1,6 +1,15 @@
 # Design system
 
-Status: **direction only. No UI code or tokens exist yet.** This file will be updated with the real token values when the Expo app shell is built.
+Status: **tokens, theme and base components are implemented** in `apps/mobile/src/design` and `apps/mobile/src/components/ui`. Everything below the "Implemented" section is direction for screens not built yet.
+
+## Implemented
+
+- **Colour** (semantic tokens, light and dark): `bg, surface, surfaceSunken, ink, inkMuted, border, accent, onAccent, accentSoft, onAccentSoft, positive/caution/negative (+Soft), scrim`. One brand accent (cobalt blue; lighter periwinkle in dark). Blue was chosen so the accent never collides with the green/red used for meaning. `tokens.test.ts` asserts WCAG contrast for every text/surface pair in both palettes (body text at least 4.5:1, primary ink at least 7:1, accent UI at least 3:1).
+- **Type**: Plus Jakarta Sans for Latin, with Noto Sans Bengali bundled. The Latin face lacks the taka sign, so `Text` draws ৳ in the Bengali face to match digit size. Scale: hero 44, display 32, title 24, heading 18, body 16, callout 14, caption 12, overline 11. Money uses tabular figures. Text respects system font scaling (capped at 1.2x for hero and display sizes, 1.6x otherwise).
+- **Spacing and shape**: 4pt grid, radii 10/16/24/32, 20pt screen gutter, minimum touch target 44.
+- **Components**: see the list in `ARCHITECTURE.md`. Icon-only controls require an accessibility label. Status is never colour alone (`Badge` carries an icon or text). State is exposed with `aria-*` props so it works on web and native. Skeletons stop pulsing under reduce-motion.
+- **States**: `AsyncBoundary` (loading, empty, error, ready), `OfflineBanner`, `ErrorState`, `ErrorBoundary`, not-found screen, toasts with optional action. All can be previewed in More → Developer → Component gallery, including a "simulate offline" switch.
+- **Known gaps**: no custom app icon or splash artwork yet; Bangla UI strings are not translated yet (the font stack supports them); theme choice is not persisted yet; the text-input placeholder shows the taka sign in the fallback font.
 
 ## Intent (from the spec)
 

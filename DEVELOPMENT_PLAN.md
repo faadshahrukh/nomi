@@ -34,8 +34,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 |---|---|---|
 | 0 | Repo, workspaces, documentation | **Done** |
 | 1 | Deterministic core: money, dates, ledger, validation, transfers, balances, categories roll-up, shared-expense accounting, budgets, recurring, Safe to Spend, What Changed, AI schema/resolve/policy, in-memory repository, audit, permission boundaries | **Done**, 62 tests |
-| 2 | Expo app shell: tokens, light/dark, navigation, reusable components, loading/empty/error/offline states | Next |
-| 3 | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | |
+| 2 | Expo app shell: tokens, light/dark, navigation, reusable components, loading/empty/error/offline states | **Done**. Verified in a browser build in light and dark; not yet run on a phone or simulator |
+| 3 (next) | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | |
 | 4 | Text capture end to end with a stub interpreter, confirmation card, field-level correction | |
 | 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | |
 | 6 | Onboarding (sign-up/sign-in with email or Google) and first transaction | |

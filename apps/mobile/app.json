@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Nomi",
+    "slug": "nomi",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "nomi",
+    "userInterfaceStyle": "automatic",
+    "ios": { "supportsTablet": false, "bundleIdentifier": "app.nomi.mobile" },
+    "android": { "package": "app.nomi.mobile", "predictiveBackGestureEnabled": false },
+    "web": { "output": "single", "bundler": "metro" },
+    "plugins": ["expo-router", ["expo-splash-screen", { "backgroundColor": "#F4F6F9" }]],
+    "experiments": { "typedRoutes": true }
+  }
+}
