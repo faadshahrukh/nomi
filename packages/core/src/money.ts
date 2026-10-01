@@ -74,14 +74,22 @@ const AMOUNT_RE = /(\d[\d,]*(?:\.\d+)?)(?:\s*(k|thousand|lakhs?|lacs?|crores?|�
  * that rejects amounts the user never typed.
  */
 export function extractAmounts(text: string, currency: CurrencyCode): number[] {
-  const normalized = fromBanglaDigits(text);
-  const out: number[] = [];
+  return findAmountMatches(text, currency).map((m) => m.minor);
+}
+
+export interface AmountMatch { text: string; minor: number; start: number; end: number }
+
+/** Like extractAmounts but also returns where each amount sits, and the text as the user wrote it ("5k", "১২০০"). */
+export function findAmountMatches(text: string, currency: CurrencyCode): AmountMatch[] {
+  const normalized = fromBanglaDigits(text); // 1:1 character replacement, so indices still match `text`
+  const out: AmountMatch[] = [];
   for (const m of normalized.matchAll(AMOUNT_RE)) {
     const num = Number((m[1] ?? '').replace(/,/g, ''));
     if (!Number.isFinite(num)) continue;
     const word = m[2];
     const mult = word ? (MULTIPLIERS.find(([re]) => re.test(word))?.[1] ?? 1) : 1;
-    out.push(toMinor(String(Math.round(num * mult * 100) / 100), currency));
+    const start = m.index ?? 0;
+    out.push({ text: text.slice(start, start + m[0].length), minor: toMinor(String(Math.round(num * mult * 100) / 100), currency), start, end: start + m[0].length });
   }
   return out;
 }

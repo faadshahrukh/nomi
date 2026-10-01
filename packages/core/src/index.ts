@@ -14,3 +14,5 @@ export * from './goals';
 export * from './defaultCategories';
 export * from './demo';
 export * from './homeSummary';
+export * from './draft';
+export * from './capture';

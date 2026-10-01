@@ -5,6 +5,7 @@ import type { Account, Category, Goal, Id, LedgerData, Person, Transaction } fro
 import { InterpretationSchema, type ProposedTransaction } from './schema';
 import { decide, type ConfirmationPreference, type Decision } from './policy';
 import type { TransactionInput } from '../transactionService';
+import { QUESTIONS, type Clarification, type ClarifyField, type EditableDraft } from '../draft';
 
 export interface ResolveContext {
   userId: Id; rawText: string; today: LocalDate; defaultCurrency: CurrencyCode;
@@ -13,8 +14,6 @@ export interface ResolveContext {
   source: 'text' | 'voice'; preference: ConfirmationPreference; highImpactMinor?: number;
 }
 
-export type ClarifyField = 'amount' | 'purpose' | 'account' | 'to_account' | 'person' | 'goal' | 'direction' | 'date' | 'unclear';
-export interface Clarification { field: ClarifyField; question: string; proposalIndex: number | null }
 
 export type Provenance = 'stated' | 'inferred' | 'default';
 export interface FieldReading { value: string | number | null; confidence: number; provenance: Provenance }
@@ -23,6 +22,8 @@ export interface ResolvedProposal {
   index: number;
   /** Complete draft ready for TransactionService.create, or null when it cannot be built. */
   draft: TransactionInput | null;
+  /** Best-effort reading of the input, always present, with the amount nullable. This is what the review card edits. */
+  editable: EditableDraft;
   /** What the app understood, for the "what I heard" card and field-by-field correction. */
   fields: Partial<Record<'type' | 'amount' | 'category' | 'merchant' | 'account' | 'toAccount' | 'date' | 'notes' | 'paidBy' | 'counterparty', FieldReading>>;
   issues: Issue[];
@@ -46,17 +47,7 @@ function findByName<T extends { name: string }>(items: T[], name: string | null,
     ?? items.find((i) => norm(i.name).includes(n) || n.includes(norm(i.name)));
 }
 
-const Q = {
-  amount: (hint?: string) => (hint ? `How much was ${hint}?` : 'How much was it?'),
-  purpose: (amountLabel: string) => `What was the ${amountLabel} for?`,
-  account: 'Which account did this go through?',
-  to_account: 'Which account did the money move to?',
-  person: 'Who was this with?',
-  goal: 'Which goal is this for?',
-  direction: 'Did you lend it, or borrow it?',
-  date: 'Which day was this?',
-  unclear: 'What happened with your money?',
-};
+const Q = QUESTIONS;
 
 function resolveOne(p: ProposedTransaction, index: number, count: number, ctx: ResolveContext): ResolvedProposal {
   const issues: Issue[] = [];
@@ -90,6 +81,7 @@ function resolveOne(p: ProposedTransaction, index: number, count: number, ctx: R
   fields.notes = { value: p.notes, confidence: 1, provenance: p.notes ? 'stated' : 'default' };
 
   // --- accounts
+  const internal = p.type === 'transfer' || p.type === 'savings_contribution' || p.type === 'goal_contribution';
   const liveAccounts = ctx.accounts.filter((a) => !a.archivedAt);
   const accountByName = findByName(liveAccounts, p.accountName, (a) => a.aliases);
   const paidByOther = p.type === 'expense' && p.paidByName != null && norm(p.paidByName) !== 'me';
@@ -97,13 +89,13 @@ function resolveOne(p: ProposedTransaction, index: number, count: number, ctx: R
   let accountProv: Provenance = account ? 'stated' : 'default';
   if (!account && !paidByOther) {
     if (p.accountName) { issues.push({ code: 'account_not_found', field: 'account', message: `Unknown account "${p.accountName}".` }); ask('account', Q.account); }
-    else if (liveAccounts.length === 1) account = liveAccounts[0];
-    else if (ctx.defaultAccountId) account = liveAccounts.find((a) => a.id === ctx.defaultAccountId);
+    // Moving money between accounts never assumes the source: that would silently move the wrong money.
+    else if (!internal && liveAccounts.length === 1) account = liveAccounts[0];
+    else if (!internal && ctx.defaultAccountId) account = liveAccounts.find((a) => a.id === ctx.defaultAccountId);
     if (!account && !p.accountName) { issues.push({ code: 'account_required', field: 'account', message: 'Account unknown.' }); ask('account', Q.account); }
   }
   fields.account = paidByOther ? undefined : { value: account?.id ?? null, confidence: accountProv === 'stated' ? p.confidence.account : account ? 1 : 0, provenance: accountProv };
   const toAccount = findByName(liveAccounts, p.toAccountName, (a) => a.aliases);
-  const internal = p.type === 'transfer' || p.type === 'savings_contribution' || p.type === 'goal_contribution';
   if (internal) {
     if (!toAccount) { issues.push({ code: 'to_account_required', field: 'toAccount', message: 'Destination unknown.' }); ask('to_account', Q.to_account); }
     fields.toAccount = { value: toAccount?.id ?? null, confidence: toAccount ? p.confidence.account : 0, provenance: toAccount ? 'stated' : 'default' };
@@ -174,6 +166,15 @@ function resolveOne(p: ProposedTransaction, index: number, count: number, ctx: R
   const confidence = Math.min(...parts);
   if (draft) draft.aiConfidence = confidence;
 
+  const editable: EditableDraft = {
+    type: p.type, amountMinor, currency, localDate: dr.date ?? ctx.today, source: ctx.source,
+    accountId: paidByOther ? null : account?.id ?? null, toAccountId: internal ? toAccount?.id ?? null : null,
+    categoryId: cat?.id ?? null, merchantName: p.merchantName, notes: p.notes, paidBy, splits, counterpartyId,
+    debtDirection: p.type === 'debt' && dirOk ? (p.direction as 'lent' | 'borrowed') : null,
+    repaymentDirection: p.type === 'repayment' && dirOk ? (p.direction as 'received' | 'paid') : null,
+    goalId: goal?.id ?? null, aiConfidence: confidence, rawInput: ctx.rawText,
+  };
+
   const decision = decide({
     type: p.type, amountMinor, confidence, blockingIssue: hardIssue || clarification !== null, amountNotInInput,
     hasWarnings: issues.length > 0 || fields.category?.provenance === 'inferred', isShared: !!splits, proposalCount: count,
@@ -181,7 +182,7 @@ function resolveOne(p: ProposedTransaction, index: number, count: number, ctx: R
   });
   // Low confidence with nothing missing: ask about the weakest critical field.
   const finalClar = decision === 'clarify' && !clarification ? { field: 'unclear' as ClarifyField, question: Q.unclear, proposalIndex: count > 1 ? index : null } : clarification;
-  return { index, draft: decision === 'clarify' ? null : draft, fields, issues, confidence, decision, clarification: finalClar };
+  return { index, draft: decision === 'clarify' ? null : draft, editable, fields, issues, confidence, decision, clarification: finalClar };
 }
 
 /** Validates and resolves raw model output. Never throws; unusable output becomes `invalid_output` so the UI can offer manual entry. */

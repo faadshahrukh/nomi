@@ -1,13 +1,22 @@
 export * from './schema';
 export * from './policy';
 export * from './resolve';
+export * from './ruleInterpreter';
 
 import type { Interpretation } from './schema';
 
+export interface InterpretInput {
+  text: string; locale: 'en' | 'bn' | 'mixed'; today: string; currency: string;
+  accounts: Array<{ name: string; aliases: string[] }>;
+  categoryNames: string[]; personNames: string[]; goalNames: string[];
+}
+
 /**
- * Port for the language model. The production adapter runs server-side (the API key never ships in the app),
- * sends only names and the raw text (never balances), and must return an object matching InterpretationSchema.
+ * Port for turning language into a structured proposal. Implementations:
+ *  - RuleBasedInterpreter (built): on-device, offline, deterministic. Covers the common phrasings; the fallback when no model is reachable.
+ *  - A Claude adapter (planned, milestone 5): runs server-side, never sees balances, returns the same schema.
+ * Whatever it returns is validated by resolveInterpretation; an interpreter can never write to the ledger.
  */
 export interface Interpreter {
-  interpret(input: { text: string; locale: 'en' | 'bn' | 'mixed'; today: string; accountNames: string[]; categoryNames: string[]; personNames: string[]; goalNames: string[] }): Promise<Interpretation>;
+  interpret(input: InterpretInput): Promise<Interpretation>;
 }
