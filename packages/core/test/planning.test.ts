@@ -95,6 +95,10 @@ describe('what changed', () => {
     expect(whatChanged([], categories, '2025-03-15')).toEqual({ status: 'insufficient_data', reason: 'no_transactions' });
     expect(whatChanged([e(1, '2025-03-10', 'other')], categories, '2025-03-15')).toEqual({ status: 'insufficient_data', reason: 'no_complete_baseline_month' });
   });
+  it('waits for the first week of the month before comparing', () => {
+    expect(whatChanged([...history, e(500_000, '2025-03-01', 'dining')], categories, '2025-03-06')).toEqual({ status: 'insufficient_data', reason: 'early_in_month' });
+    expect(whatChanged([...history, e(500_000, '2025-03-01', 'dining')], categories, '2025-03-07').status).toBe('ok');
+  });
   it('compares pace-matched spending and ranks the driving categories with evidence', () => {
     const march = [e(400_000, '2025-03-05', 'dining'), e(110_000, '2025-03-06', 'rideshare')];
     const r = whatChanged([...history, ...march], categories, '2025-03-15');

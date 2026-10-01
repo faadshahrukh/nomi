@@ -2,6 +2,8 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { space } from '@/design/tokens';
 import { useTheme, type SchemePreference } from '@/design/theme';
+import { useLedger } from '@/data/LedgerProvider';
+import type { DataMode } from '@/data/repositories';
 import { ListRow, Screen, ScreenTitle, SectionHeader, Segmented, Surface, Text, useToast } from '@/components/ui';
 
 export const SHOW_DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_DEV_TOOLS === '1';
@@ -10,6 +12,7 @@ export default function More() {
   const { preference, setPreference } = useTheme();
   const toast = useToast();
   const router = useRouter();
+  const { mode, setMode } = useLedger();
   const later = (what: string) => () => toast.show({ message: `${what} isn't built yet.`, tone: 'info' });
   return (
     <Screen>
@@ -39,6 +42,11 @@ export default function More() {
         <View style={{ gap: space.xs }}>
           <SectionHeader title="Developer" />
           <Surface padding="sm">
+            <View style={{ padding: space.md, gap: space.sm }}>
+              <Text variant="bodyStrong">Data</Text>
+              <Text variant="caption" tone="muted">Demo shows example accounts and transactions, stored separately from real data. Empty shows a new user's first-run screens.</Text>
+              <Segmented<DataMode> accessibilityLabel="Data" value={mode} onChange={setMode} options={[{ value: 'demo', label: 'Demo data' }, { value: 'real', label: 'Empty' }]} />
+            </View>
             <ListRow icon="code" title="Component gallery" subtitle="Every component and UI state" showChevron onPress={() => router.push('/gallery')} />
           </Surface>
         </View>

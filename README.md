@@ -10,9 +10,10 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 
 | Area | State |
 |---|---|
-| Deterministic finance core (`packages/core`) | **Built and tested** (64 tests) |
+| Deterministic finance core (`packages/core`) | **Built and tested** (98 tests, including the real SQL run against SQLite) |
+| On-device storage (SQLite), demo data, Home summary | **Built**. Native only; web preview uses an in-memory store |
 | AI interpretation contract, validation, confirmation policy | **Built and tested** (no model adapter yet) |
-| Mobile app shell (`apps/mobile`, Expo) | **Built**: tokens, light/dark, navigation, component library, loading/empty/error/offline states. No data connected yet |
+| Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (read-only), Planning (read-only) and Insights (What changed) reading real stored data. Capture, onboarding, auth and editing are not built |
 | Backend (Supabase), auth, sync | Not started |
 | Voice capture | Not started |
 | Financial Radar, Insights, Money Circle UI, Ask Money | Not started |
@@ -41,7 +42,11 @@ Run the app (from `apps/mobile`):
 npx expo start          # then press i / a, or scan the QR code in Expo Go
 npx expo start --web    # browser preview
 EXPO_PUBLIC_DEV_TOOLS=1 npx expo export -p web   # static web build including the component gallery
+EXPO_PUBLIC_DATA_MODE=demo|real                   # which data to open (default: demo in development, real in release)
+EXPO_PUBLIC_TODAY_OVERRIDE=2025-03-15             # development only: pin "today" for reproducible screenshots
 ```
+
+Demo data lives in its own database file (`nomi-demo.db`) under its own user id and is labelled "Demo data" on Home. Real data uses `nomi.db`. They never mix. In development, More → Developer switches between them.
 
 Node 22+, npm 10+. The Component gallery (More → Developer) is shown in development builds, or when `EXPO_PUBLIC_DEV_TOOLS=1`.
 

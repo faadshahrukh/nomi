@@ -1,4 +1,4 @@
-import { formatMoney, type CurrencyCode } from '@nomi/core';
+import { floorToWhole, formatMoney, roundToWhole, type CurrencyCode } from '@nomi/core';
 import type { TypeVariant } from '@/design/tokens';
 import { Text, type Tone } from './Text';
 
@@ -8,10 +8,13 @@ const NAME: Record<string, string> = { BDT: 'taka', USD: 'US dollars', INR: 'rup
 export interface MoneyProps {
   minor: number; currency: CurrencyCode;
   size?: keyof typeof SIZE; tone?: Tone; signed?: boolean; locale?: 'en' | 'bn';
+  /** Display rounding to whole currency units. 'floor' for safe figures (never overstates), 'nearest' for summaries. Default: exact. */
+  rounding?: 'floor' | 'nearest';
 }
 
 /** Renders integer minor units. All formatting goes through the core so the UI never does money maths. */
-export function Money({ minor, currency, size = 'medium', tone = 'ink', signed, locale = 'en' }: MoneyProps) {
+export function Money({ minor: exact, currency, size = 'medium', tone = 'ink', signed, locale = 'en', rounding }: MoneyProps) {
+  const minor = rounding === 'floor' ? floorToWhole(exact, currency) : rounding === 'nearest' ? roundToWhole(exact, currency) : exact;
   const label = `${formatMoney(minor, currency, { symbol: false, signed, locale })} ${NAME[currency] ?? currency}`;
   return (
     <Text variant={SIZE[size]} tone={tone} numeric accessibilityLabel={label} adjustsFontSizeToFit numberOfLines={1}>

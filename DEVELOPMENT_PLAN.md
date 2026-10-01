@@ -35,8 +35,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 0 | Repo, workspaces, documentation | **Done** |
 | 1 | Deterministic core: money, dates, ledger, validation, transfers, balances, categories roll-up, shared-expense accounting, budgets, recurring, Safe to Spend, What Changed, AI schema/resolve/policy, in-memory repository, audit, permission boundaries | **Done**, 62 tests |
 | 2 | Expo app shell: tokens, light/dark, navigation, reusable components, loading/empty/error/offline states | **Done**. Verified in a browser build in light and dark; not yet run on a phone or simulator |
-| 3 (next) | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | |
-| 4 | Text capture end to end with a stub interpreter, confirmation card, field-level correction | |
+| 3 | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | **Done**. Verified in a browser build with an in-memory store; the SQLite adapter has not run on a device yet. Also made Transactions, Planning and Insights read-only views of the same data so no tab contradicts Home |
+| 4 (next) | Text capture end to end with a stub interpreter, confirmation card, field-level correction | |
 | 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | |
 | 6 | Onboarding (sign-up/sign-in with email or Google) and first transaction | |
 | 7 | Voice capture states and fallback | |
@@ -50,6 +50,13 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 
 UI, data model, business logic, persistence, loading/error/empty/offline states, validation, accessibility, tests, and documentation updated.
 
+## Milestone 3 notes
+
+- Home shows the spec's order with one change: the slot named Financial Radar shows **What changed** (real, deterministic). Radar signals themselves are milestone 10.
+- Budget projection was fixed during this milestone: fixed bills paid early in the month are no longer extrapolated as a daily rate, and unpaid bills due later are added.
+- What Changed now waits until day 7 of the month so a few days of spending is not called a trend.
+- Known gaps: the Android and iOS builds of the SQLite adapter are untested on a device; web has no durable store; Home refreshes only on load (no foreground refresh yet); there is no way to add data yet, so a real ledger is empty until milestones 4 and 6.
+
 ## Not implemented yet, so do not assume it works
 
-Everything outside `packages/core`: the app, backend, auth, voice, sync, notifications, Radar, Insights, export, deletion, app lock.
+Backend, auth, capture and interpretation in the app, voice, sync, notifications, Radar signals, creating or editing any record, export, deletion, app lock.

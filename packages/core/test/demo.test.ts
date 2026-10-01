@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_CATEGORIES, DEMO_USER_ID, accountBalance, buildDemoData, buildHomeSummary, budgetStatus, floorToWhole, formatMoney, roundToWhole, seedDemoData,
+  DEFAULT_CATEGORIES, DEMO_USER_ID, describeTransactions, filterTransactions, accountBalance, buildDemoData, buildHomeSummary, budgetStatus, floorToWhole, formatMoney, roundToWhole, seedDemoData,
   seedSystemCategories, upcomingObligations, validateTransaction, type LedgerSnapshot,
 } from '../src';
 import { tx } from './fixtures';
@@ -128,5 +128,41 @@ describe('budget projection and display rounding', () => {
     expect(roundToWhole(866_633, 'BDT')).toBe(866_600);
     expect(roundToWhole(866_650, 'BDT')).toBe(866_700);
     expect(formatMoney(floorToWhole(1_245_747, 'BDT'), 'BDT')).toBe('৳12,457');
+  });
+});
+
+describe('ledger list and filters', () => {
+  const d = snapshotOf();
+  const items = describeTransactions(d.transactions, d.accounts, d.categories);
+  it('lists every live transaction newest first with names resolved', () => {
+    expect(items).toHaveLength(d.transactions.length);
+    const dates = items.map((i) => i.transaction.localDate);
+    expect([...dates].sort().reverse()).toEqual(dates);
+    const transfer = items.find((i) => i.transaction.type === 'transfer')!;
+    expect(transfer.accountName).toBeTruthy();
+    expect(transfer.toAccountName).toBeTruthy();
+    expect(transfer.direction).toBe('neutral');
+  });
+  it('excludes soft-deleted transactions', () => {
+    const gone = { ...d.transactions[0]!, deletedAt: 'x' };
+    expect(describeTransactions([gone, ...d.transactions.slice(1)], d.accounts, d.categories)).toHaveLength(d.transactions.length - 1);
+  });
+  it('filters match the ledger rules and partition the data sensibly', () => {
+    const f = (k: Parameters<typeof filterTransactions>[1]) => filterTransactions(items, k).map((i) => i.transaction.type);
+    expect(f('income').every((t) => t === 'income')).toBe(true);
+    expect(f('expenses').every((t) => t === 'expense' || t === 'refund')).toBe(true);
+    expect(f('transfers').every((t) => ['transfer', 'savings_contribution', 'goal_contribution'].includes(t))).toBe(true);
+    expect(filterTransactions(items, 'recurring').every((i) => i.transaction.recurringRuleId)).toBe(true);
+    expect(filterTransactions(items, 'all')).toHaveLength(items.length);
+    expect(f('income').length).toBeGreaterThan(0);
+    expect(f('transfers').length).toBeGreaterThan(0);
+  });
+  it('summarises goals and recurring rules', () => {
+    const s = buildHomeSummary(d, TODAY);
+    const emergency = s.goals.find((g) => g.goal.id === 'demo-goal-emergency')!;
+    expect(emergency.savedMinor).toBe(4_000_000 + 4 * 500_000);
+    expect(emergency.ratio).toBeCloseTo(emergency.savedMinor / emergency.goal.targetMinor);
+    expect(s.recurring.map((r) => r.rule.name)).toEqual(['Electricity', 'Streaming', 'Rent', 'Internet']); // by next due date
+    expect(s.recurring[0]!.nextDate).toBe('2025-03-18');
   });
 });

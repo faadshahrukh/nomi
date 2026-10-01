@@ -1,6 +1,6 @@
 # Database schema
 
-The TypeScript types in `packages/core/src/types.ts` are the authoritative model today. SQL migrations do not exist yet; this document defines what they must implement. All tables carry `user_id` and are protected by RLS (`user_id = auth.uid()`), except system categories (`user_id IS NULL`, readable by everyone, writable by no one).
+The TypeScript types in `packages/core/src/types.ts` are the model. **Migration 1 is implemented** for SQLite in `packages/core/src/sql/migrations.ts` and covers `profiles, accounts, categories, people, transactions, budgets, recurring_rules, goals, audit_log` with the indexes below. Column names are snake_case (`interval_n` for a rule's interval). `category_corrections` and `insights` are not created yet. The server database (Postgres with RLS) is still planned and must implement the same shape. All tables carry `user_id` and are protected by RLS (`user_id = auth.uid()`), except system categories (`user_id IS NULL`, readable by everyone, writable by no one).
 
 | Table | Key columns | Notes |
 |---|---|---|
@@ -21,5 +21,7 @@ The TypeScript types in `packages/core/src/types.ts` are the authoritative model
 Constraints to add in SQL beyond RLS: foreign keys must reference rows with the same `user_id`; transfer `account_id <> to_account_id`; `sum(splits) = amount_minor`. The application validates the same rules (`validateTransaction`) so offline writes are checked before sync.
 
 Indexes: `(user_id, local_date)`, `(user_id, category_id, local_date)`, `(user_id, account_id)`, unique `(recurring_rule_id, occurrence_date)` where not deleted.
+
+On device the row-level scoping is done by always filtering on `user_id` in the repository; on the server it is enforced by RLS.
 
 Export and deletion: a user can export all rows as CSV/JSON and delete their account, which cascades to every table above.

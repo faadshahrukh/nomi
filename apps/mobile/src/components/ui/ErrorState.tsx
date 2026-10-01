@@ -24,7 +24,7 @@ export function ErrorState({ title = 'Something went wrong', message = 'Nothing 
         <Text variant="heading" align="center">{title}</Text>
         <Text variant="callout" tone="muted" align="center" style={{ maxWidth: 320 }}>{message}</Text>
       </View>
-      {onRetry ? <Button label={retryLabel} icon="refresh" variant="secondary" onPress={onRetry} /> : null}
+      {onRetry ? <View style={{ alignSelf: 'center' }}><Button label={retryLabel} icon="refresh" variant="secondary" onPress={onRetry} /></View> : null}
     </View>
   );
 }

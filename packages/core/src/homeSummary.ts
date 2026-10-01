@@ -2,7 +2,7 @@ import { addDays, endOfMonth, startOfMonth, type LocalDate } from './dates';
 import { budgetStatus, type BudgetStatus } from './budgets';
 import { goalSavedMinor } from './goals';
 import { incomeTotal, netSpending } from './ledger';
-import { upcomingObligations, type UpcomingItem } from './recurring';
+import { occurrences, upcomingObligations, type UpcomingItem } from './recurring';
 import { safeToSpend, type SafeToSpend } from './safeToSpend';
 import { whatChanged, type WhatChanged } from './whatChanged';
 import type { Account, Budget, Category, Goal, LedgerData, Profile, RecurringRule, Transaction } from './types';
@@ -13,10 +13,20 @@ export interface LedgerSnapshot extends LedgerData {
 
 export interface RecentItem {
   transaction: Transaction;
-  title: string; categoryName: string | null; accountName: string | null;
+  title: string; categoryName: string | null; accountName: string | null; toAccountName: string | null;
   /** Signed effect on the user's money for display: income +, expense -, 0 for transfers. */
   direction: 'in' | 'out' | 'neutral';
 }
+
+export interface GoalProgress {
+  goal: Goal; savedMinor: number; ratio: number;
+  /** Still to set aside this month for this goal (see Safe to Spend). */
+  reservedThisMonthMinor: number;
+}
+
+export interface RecurringSummary { rule: RecurringRule; nextDate: LocalDate | null }
+
+export type TransactionFilter = 'all' | 'expenses' | 'income' | 'transfers' | 'recurring';
 
 export interface HomeSummary {
   today: LocalDate; currency: string;
@@ -34,6 +44,8 @@ export interface HomeSummary {
   budgets: BudgetStatus[];
   upcoming: UpcomingItem[];
   recent: RecentItem[];
+  goals: GoalProgress[];
+  recurring: RecurringSummary[];
 }
 
 export const UPCOMING_WINDOW_DAYS = 14;
@@ -51,8 +63,6 @@ const TYPE_TITLES: Record<Transaction['type'], string> = {
 export function buildHomeSummary(snap: LedgerSnapshot, today: LocalDate): HomeSummary {
   const txs = snap.transactions.filter((t) => !t.deletedAt);
   const month = { from: startOfMonth(today), to: today };
-  const accountName = new Map(snap.accounts.map((a: Account) => [a.id, a.name]));
-  const categoryName = new Map(snap.categories.map((c: Category) => [c.id, c.name]));
 
   const sts = safeToSpend({ accounts: snap.accounts, transactions: txs, recurringRules: snap.recurringRules, goals: snap.goals, today, bufferMinor: snap.profile.safetyBufferMinor });
   const wc = whatChanged(txs, snap.categories, today);
@@ -62,15 +72,7 @@ export function buildHomeSummary(snap: LedgerSnapshot, today: LocalDate): HomeSu
   const spent = netSpending(txs, month);
   const income = incomeTotal(txs, month);
 
-  const recent: RecentItem[] = [...txs]
-    .sort((a, b) => b.localDate.localeCompare(a.localDate) || b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
-    .slice(0, RECENT_COUNT)
-    .map((t) => {
-      const cat = t.categoryId ? categoryName.get(t.categoryId) ?? null : null;
-      const direction = t.type === 'income' || t.type === 'refund' ? 'in' : t.type === 'expense' ? 'out' : 'neutral';
-      return { transaction: t, title: t.merchantName ?? cat ?? t.notes ?? TYPE_TITLES[t.type], categoryName: cat,
-        accountName: t.accountId ? accountName.get(t.accountId) ?? null : null, direction };
-    });
+  const recent = describeTransactions(txs, snap.accounts, snap.categories).slice(0, RECENT_COUNT);
 
   return {
     today, currency: snap.profile.currency,
@@ -84,6 +86,42 @@ export function buildHomeSummary(snap: LedgerSnapshot, today: LocalDate): HomeSu
     safeToSpend: sts, whatChanged: wc, budgets,
     upcoming: upcomingObligations(snap.recurringRules, txs, today, addDays(today, UPCOMING_WINDOW_DAYS)),
     recent,
+    goals: snap.goals.map((g) => {
+      const saved = goalSavedMinor(g, txs);
+      return { goal: g, savedMinor: saved, ratio: g.targetMinor > 0 ? Math.min(1, saved / g.targetMinor) : 0,
+        reservedThisMonthMinor: sts.goalReserves.find((r) => r.goalId === g.id)?.reservedMinor ?? 0 };
+    }),
+    recurring: snap.recurringRules.filter((r) => r.active).map((r) => ({ rule: r, nextDate: occurrences(r, today, addDays(today, 400))[0] ?? null }))
+      .sort((a, b) => (a.nextDate ?? '9999').localeCompare(b.nextDate ?? '9999')),
   };
+}
+
+/** Newest first. Resolves names so screens can render a ledger line without looking anything up. */
+export function describeTransactions(txs: Transaction[], accounts: Account[], categories: Category[]): RecentItem[] {
+  const accountName = new Map(accounts.map((a) => [a.id, a.name]));
+  const categoryName = new Map(categories.map((c) => [c.id, c.name]));
+  return txs.filter((t) => !t.deletedAt)
+    .sort((a, b) => b.localDate.localeCompare(a.localDate) || b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+    .map((t) => {
+      const cat = t.categoryId ? categoryName.get(t.categoryId) ?? null : null;
+      const direction = t.type === 'income' || t.type === 'refund' ? 'in' : t.type === 'expense' ? 'out' : 'neutral';
+      return { transaction: t, title: t.merchantName ?? cat ?? t.notes ?? TYPE_TITLES[t.type], categoryName: cat,
+        accountName: t.accountId ? accountName.get(t.accountId) ?? null : null,
+        toAccountName: t.toAccountId ? accountName.get(t.toAccountId) ?? null : null, direction };
+    });
+}
+
+/** Ledger tabs. "expenses" includes shared and refunded purchases; "transfers" includes savings and goal moves. */
+export function filterTransactions(items: RecentItem[], filter: TransactionFilter): RecentItem[] {
+  const keep = (t: Transaction): boolean => {
+    switch (filter) {
+      case 'all': return true;
+      case 'expenses': return t.type === 'expense' || t.type === 'refund';
+      case 'income': return t.type === 'income';
+      case 'transfers': return t.type === 'transfer' || t.type === 'savings_contribution' || t.type === 'goal_contribution';
+      case 'recurring': return t.recurringRuleId !== null;
+    }
+  };
+  return items.filter((i) => keep(i.transaction));
 }
 

@@ -5,6 +5,8 @@ import type { Category, Id, Transaction } from './types';
 export interface WhatChangedOptions {
   baselineMonths?: number;      // how many previous months to average (default 3)
   similarRatio?: number;        // |delta|/baseline below this = "similar" (default 5%)
+  /** Wait this many days into the month before comparing, so one or two days of spending is not called a trend (default 7). */
+  minDayOfMonth?: number;
   minDriverMinor?: number;      // ignore category drivers smaller than this (default 500.00 in major units => 50_000 minor)
   maxDrivers?: number;          // default 3
   /** First date the user has complete tracking from. Defaults to their earliest transaction. */
@@ -19,7 +21,7 @@ export interface Driver {
 }
 
 export type WhatChanged =
-  | { status: 'insufficient_data'; reason: 'no_transactions' | 'no_complete_baseline_month' }
+  | { status: 'insufficient_data'; reason: 'no_transactions' | 'early_in_month' | 'no_complete_baseline_month' }
   | {
       status: 'ok'; direction: 'higher' | 'lower' | 'similar';
       currentMinor: number; baselineMinor: number; deltaMinor: number; deltaRatio: number;
@@ -30,6 +32,7 @@ export type WhatChanged =
 /**
  * Compares month-to-date spending with the average of previous months over the SAME elapsed days
  * (pace-matched), using only months that were fully tracked. Reports which categories drive the difference.
+ * It waits until minDayOfMonth (default 7) so a few days of spending is not called a trend.
  * It states numbers and supporting transactions only; it never infers a behavioural reason.
  */
 export function whatChanged(txs: Transaction[], categories: Category[], today: LocalDate, opts: WhatChangedOptions = {}): WhatChanged {
@@ -39,6 +42,7 @@ export function whatChanged(txs: Transaction[], categories: Category[], today: L
   const start = opts.trackingStartDate ?? live.reduce((min, t) => (t.localDate < min ? t.localDate : min), live[0]!.localDate);
 
   const { y, m, d } = parseLocalDate(today);
+  if (d < (opts.minDayOfMonth ?? 7)) return { status: 'insufficient_data', reason: 'early_in_month' };
   const monthStart = startOfMonth(today);
   const months: Array<{ key: string; from: LocalDate; to: LocalDate }> = [];
   for (let i = 1; i <= N; i++) {

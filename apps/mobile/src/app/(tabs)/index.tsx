@@ -1,35 +1,55 @@
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { space } from '@/design/tokens';
+import { appNow } from '@/data/clock';
+import { useLedger } from '@/data/LedgerProvider';
 import { CaptureCard } from '@/features/home/CaptureCard';
+import { DemoBanner } from '@/features/home/DemoBanner';
 import { HomeHeader } from '@/features/home/HomeHeader';
-import { EmptyState, Screen, SectionHeader, Surface, useToast } from '@/components/ui';
+import { HomeSkeleton } from '@/features/home/HomeSkeleton';
+import { MoneyPulseCard } from '@/features/home/MoneyPulseCard';
+import { RecentActivity } from '@/features/home/RecentActivity';
+import { SafeToSpendCard } from '@/features/home/SafeToSpendCard';
+import { UpcomingCard } from '@/features/home/UpcomingCard';
+import { WhatChangedCard } from '@/features/home/WhatChangedCard';
+import { EmptyState, ErrorState, Screen, SectionHeader, Surface, useToast } from '@/components/ui';
 
-/** Home, in the order the spec requires. Sections other than capture show first-run empty states until the data layer is connected. */
-const SECTIONS = [
-  { title: 'Money Pulse', empty: { title: 'Your balance will appear here', message: 'Add an account to see your balance, spending and income this month.' } },
-  { title: 'Safe to Spend', empty: { title: 'Not enough to estimate yet', message: 'It needs an account balance and a month to look ahead.' } },
-  { title: 'Financial Radar', empty: { title: 'Nothing needs your attention', message: 'Important changes and risks will show up here.' } },
-  { title: 'Upcoming', empty: { title: 'No bills or recurring payments', message: 'Add recurring expenses to see what is coming.' } },
-  { title: 'Recent activity', empty: { title: 'No transactions yet', message: 'Tell Nomi what you spent and it will appear here.' } },
-] as const;
+function Section({ title, actionLabel, onAction, children }: { title: string; actionLabel?: string; onAction?: () => void; children: React.ReactNode }) {
+  return <View style={{ gap: space.xs }}><SectionHeader title={title} actionLabel={actionLabel} onAction={onAction} />{children}</View>;
+}
 
+/** Home, in the order the spec requires. All figures arrive pre-computed from the core's HomeSummary. */
 export default function HomeScreen() {
   const toast = useToast();
   const router = useRouter();
+  const { state, mode, retry } = useLedger();
   const notConnected = () => toast.show({ message: "Capture isn't connected yet. It arrives in the next milestone.", tone: 'info' });
+
   return (
     <Screen>
-      <HomeHeader now={new Date()} onNotifications={() => router.push('/more')} onProfile={() => router.push('/more')} />
+      <HomeHeader now={appNow()} onNotifications={() => router.push('/more')} onProfile={() => router.push('/more')} />
+      {mode === 'demo' && state.status === 'ready' ? <DemoBanner /> : null}
       <CaptureCard onSubmitText={notConnected} onMic={notConnected} />
-      <View style={{ gap: space.xl }}>
-        {SECTIONS.map((s) => (
-          <View key={s.title} style={{ gap: space.xs }}>
-            <SectionHeader title={s.title} />
-            <Surface variant="raised"><EmptyState compact {...s.empty} /></Surface>
-          </View>
-        ))}
-      </View>
+
+      {state.status === 'loading' ? <HomeSkeleton /> : null}
+      {state.status === 'error' ? <ErrorState title="Couldn't load your money" message="Your data is safe on this device. Try again." onRetry={retry} /> : null}
+
+      {state.status === 'ready' && !state.summary.hasAccounts ? (
+        <Surface padding="xl">
+          <EmptyState icon="wallet" title="Add your first account" message="A cash wallet, bank account or bKash is enough to start. Then your balance, Safe to Spend and insights appear here."
+            actionLabel="Add an account" onAction={() => toast.show({ message: "Accounts aren't built yet. They arrive with onboarding.", tone: 'info' })} />
+        </Surface>
+      ) : null}
+
+      {state.status === 'ready' && state.summary.hasAccounts ? (
+        <View style={{ gap: space.xl }}>
+          <Section title="Money Pulse"><MoneyPulseCard summary={state.summary} /></Section>
+          <Section title="Safe to Spend"><SafeToSpendCard summary={state.summary} /></Section>
+          <Section title="What changed"><WhatChangedCard summary={state.summary} categories={state.snapshot.categories} /></Section>
+          <Section title="Upcoming"><UpcomingCard summary={state.summary} /></Section>
+          <Section title="Recent activity" actionLabel="See all" onAction={() => router.push('/transactions')}><RecentActivity summary={state.summary} /></Section>
+        </View>
+      ) : null}
     </Screen>
   );
 }

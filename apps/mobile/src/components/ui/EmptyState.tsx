@@ -25,7 +25,7 @@ export function EmptyState({ icon = 'inbox', title, message, actionLabel, onActi
         <Text variant={compact ? 'bodyStrong' : 'heading'} align={compact ? 'left' : 'center'}>{title}</Text>
         {message ? <Text variant="callout" tone="muted" align={compact ? 'left' : 'center'} style={{ maxWidth: 320 }}>{message}</Text> : null}
       </View>
-      {actionLabel && onAction ? <Button label={actionLabel} variant={compact ? 'secondary' : 'primary'} onPress={onAction} /> : null}
+      {actionLabel && onAction ? <View style={{ alignSelf: compact ? 'flex-start' : 'center' }}><Button label={actionLabel} variant={compact ? 'secondary' : 'primary'} onPress={onAction} /></View> : null}
     </View>
   );
 }

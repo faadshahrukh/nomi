@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, View, type DimensionValue } from 'react-native';
+import { AccessibilityInfo, Animated, Platform, View, type DimensionValue } from 'react-native';
 import { radius } from '@/design/tokens';
 import { useTheme } from '@/design/theme';
 
@@ -18,8 +18,8 @@ export function Skeleton({ width = '100%', height = 16, rounded = radius.sm }: {
   useEffect(() => {
     if (reduce) { opacity.setValue(0.7); return; }
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(opacity, { toValue: 0.45, duration: 800, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.45, duration: 800, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== 'web' }),
     ]));
     loop.start();
     return () => loop.stop();

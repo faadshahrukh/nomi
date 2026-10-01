@@ -1,5 +1,23 @@
-import { TabPlaceholder } from '@/features/TabPlaceholder';
+import { View } from 'react-native';
+import { space } from '@/design/tokens';
+import { useLedger } from '@/data/LedgerProvider';
+import { WhatChangedCard } from '@/features/home/WhatChangedCard';
+import { ErrorState, Screen, ScreenTitle, SectionHeader, SkeletonLines } from '@/components/ui';
+
+/** Only "What changed" exists so far. Patterns, categories, merchants and reports arrive in later milestones. */
 export default function Insights() {
-  return <TabPlaceholder title="Insights" subtitle="What your money is doing" sections={['Overview', 'What changed', 'Patterns', 'Categories', 'Merchants']}
-    empty={{ icon: 'insights', title: 'Insights need a little history', message: "After a few weeks of activity, Nomi can show what changed and why. It only reports what your transactions support." }} />;
+  const { state, retry } = useLedger();
+  return (
+    <Screen>
+      <ScreenTitle title="Insights" subtitle="What your money is doing" />
+      {state.status === 'loading' ? <SkeletonLines lines={5} /> : null}
+      {state.status === 'error' ? <ErrorState onRetry={retry} title="Couldn't load insights" /> : null}
+      {state.status === 'ready' ? (
+        <View style={{ gap: space.xs }}>
+          <SectionHeader title="What changed" />
+          <WhatChangedCard summary={state.summary} categories={state.snapshot.categories} />
+        </View>
+      ) : null}
+    </Screen>
+  );
 }
