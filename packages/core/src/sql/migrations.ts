@@ -69,6 +69,8 @@ export const MIGRATIONS: string[] = [
   `ALTER TABLE profiles ADD COLUMN primary_goals TEXT NOT NULL DEFAULT '[]'; ALTER TABLE profiles ADD COLUMN onboarded_at TEXT;`,
   // 5: Radar signals the user dismissed
   `CREATE TABLE dismissed_signals (user_id TEXT NOT NULL, key TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (user_id, key));`,
+  // 6: device-local settings (reminder time, sync position). Never leaves the device.
+  `CREATE TABLE settings (user_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (user_id, key));`,
 ];
 
 /** Brings a database up to the latest schema. Safe to call on every launch. */

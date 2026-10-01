@@ -18,6 +18,8 @@ export * from './draft';
 export * from './transactionQuery';
 export * from './recurringInput';
 export * from './radar';
+export * from './exportData';
+export * from './reminders';
 export * from './capture';
 export * from './regions';
 export * from './accounts';

@@ -1,13 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { REMINDER_DEFAULT_HOUR, buildExport, exportFileName, transactionsToCsv, ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
+
+export interface ReminderSettings { enabled: boolean; hour: number }
 
 type State =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; snapshot: LedgerSnapshot; summary: HomeSummary; /** Things worth attention right now: de-duplicated, capped, minus what the user dismissed. */ radar: RadarSignal[]; /** A fresh real ledger that has not finished setup. Never true for demo data. */ needsOnboarding: boolean };
+  | { status: 'ready'; snapshot: LedgerSnapshot; summary: HomeSummary; /** Things worth attention right now: de-duplicated, capped, minus what the user dismissed. */ radar: RadarSignal[]; /** Reminder choices for this device. */ reminders: ReminderSettings; /** A fresh real ledger that has not finished setup. Never true for demo data. */ needsOnboarding: boolean };
 
 interface LedgerValue {
   state: State;
@@ -38,6 +40,12 @@ interface LedgerValue {
   markPaid: (ruleId: string, occurrenceDate: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Hides a Radar signal. It stays hidden for that month or item only. */
   dismissSignal: (key: string) => Promise<void>;
+  /** Saves this device's bill-reminder choice. Scheduling itself is done by the reminder scheduler. */
+  setReminders: (s: ReminderSettings) => Promise<void>;
+  /** Everything stored on this device as a JSON document and a transactions CSV. Nothing is sent anywhere. */
+  exportAll: () => Promise<{ json: string; csv: string; jsonName: string; csvName: string }>;
+  /** Erases everything on this device for the current data set and starts the first-run flow again. Does not touch a server account. */
+  deleteLocalData: () => Promise<void>;
   /** Sets how much Safe to Spend keeps untouched. Empty or 0 means no buffer. */
   setSafetyBuffer: (text: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Sets (or replaces) the overall monthly budget. */
@@ -59,15 +67,16 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
     try {
       const repo = await openRepository(m);
       const userId = userIdFor(m);
-      const [stored, accounts, categories, people, transactions, budgets, recurringRules, goals, dismissed] = await Promise.all([
+      const [stored, accounts, categories, people, transactions, budgets, recurringRules, goals, dismissed, remindersOn, remindersHour] = await Promise.all([
         repo.getProfile(userId), repo.listAccounts(userId), repo.listCategories(userId), repo.listPeople(userId), repo.listTransactions(userId),
         repo.listBudgets(userId), repo.listRecurringRules(userId), repo.listGoals(userId), repo.listDismissedSignals(userId),
+        repo.getSetting(userId, 'reminders.enabled'), repo.getSetting(userId, 'reminders.hour'),
       ]);
       const profile = stored;
       const snapshot: LedgerSnapshot = { profile: profile ?? fallbackProfile(userId), accounts, categories, people, transactions, budgets, recurringRules, goals };
       const today = todayIn(snapshot.profile.timezone, appNow());
       const summary = buildHomeSummary(snapshot, today);
-      setState({ status: 'ready', snapshot, summary, radar: buildRadar(snapshot, summary, today, dismissed), needsOnboarding: m === 'real' && (!stored || !stored.onboardedAt) });
+      setState({ status: 'ready', snapshot, summary, radar: buildRadar(snapshot, summary, today, dismissed), reminders: { enabled: remindersOn === '1', hour: Number(remindersHour ?? REMINDER_DEFAULT_HOUR) }, needsOnboarding: m === 'real' && (!stored || !stored.onboardedAt) });
       return summary;
     } catch {
       // Deliberately no error details: storage errors can contain SQL with financial values.
@@ -158,6 +167,26 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       }
       await load(mode, true);
       return { ok: true };
+    },
+    setReminders: async (r) => {
+      const repo = await openRepository(mode);
+      await repo.putSetting(userIdFor(mode), 'reminders.enabled', r.enabled ? '1' : '0');
+      await repo.putSetting(userIdFor(mode), 'reminders.hour', String(Math.min(23, Math.max(0, Math.round(r.hour)))));
+      await load(mode, true);
+    },
+    exportAll: async () => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const repo = await openRepository(mode);
+      const uid = userIdFor(mode);
+      const [transactions, audit] = await Promise.all([repo.listTransactions(uid, { includeDeleted: true }), repo.listAudit(uid)]);
+      const s = state.snapshot, now = appNow();
+      const doc = buildExport({ profile: s.profile, accounts: s.accounts, categories: s.categories, people: s.people, goals: s.goals, recurringRules: s.recurringRules, budgets: s.budgets, transactions, audit }, now);
+      return { json: JSON.stringify(doc, null, 2), csv: transactionsToCsv(transactions, s.accounts, s.categories, s.people), jsonName: exportFileName(now, 'json'), csvName: exportFileName(now, 'csv') };
+    },
+    deleteLocalData: async () => {
+      if (mode !== 'real') throw new Error('Demo data is not yours to delete');
+      await (await openRepository(mode)).deleteAllUserData(userIdFor(mode));
+      setVersion((v) => v + 1);
     },
     dismissSignal: async (key) => {
       await (await openRepository(mode)).dismissSignal(userIdFor(mode), key, appNow().toISOString());

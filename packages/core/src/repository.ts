@@ -23,6 +23,9 @@ export interface LedgerRepository {
   putBudget(userId: Id, budget: Budget): Promise<void>;
   /** Budgets are plans, not ledger entries, so removing one is a real delete. A missing id is not an error. */
   deleteBudget(userId: Id, id: Id): Promise<void>;
+  /** Settings that belong to this device, not the account (reminder times, sync position). Never synced. */
+  getSetting(userId: Id, key: string): Promise<string | null>;
+  putSetting(userId: Id, key: string, value: string): Promise<void>;
   /** Radar signals the user has dismissed. Keys are period- or item-scoped, so a dismissal never hides a different problem. */
   listDismissedSignals(userId: Id): Promise<string[]>;
   dismissSignal(userId: Id, key: string, at: string): Promise<void>;
@@ -37,6 +40,9 @@ export interface LedgerRepository {
   /** Optimistic concurrency: fails with ConflictError unless stored version === expectedVersion. */
   updateTransaction(userId: Id, tx: Transaction, expectedVersion: number): Promise<void>;
   appendAudit(userId: Id, entry: AuditEntry): Promise<void>;
+  listAudit(userId: Id): Promise<AuditEntry[]>;
+  /** Removes everything this user has stored on this device (used by "delete my data"). System categories are kept. */
+  deleteAllUserData(userId: Id): Promise<void>;
 
   /** Runs several writes as one unit: all happen or none do. */
   atomic<T>(work: () => Promise<T>): Promise<T>;
@@ -68,9 +74,26 @@ export class InMemoryLedgerRepository implements LedgerRepository {
   async listBudgets(userId: Id) { return this.budgets.filter((b) => b.userId === userId).map((b) => ({ ...b })); }
   async putBudget(userId: Id, b: Budget) { own(userId, b); upsert(this.budgets, b); }
   async deleteBudget(userId: Id, id: Id) { this.budgets = this.budgets.filter((b) => !(b.userId === userId && b.id === id)); }
+  settings = new Map<string, string>();
+  async getSetting(userId: Id, key: string) { return this.settings.get(`${userId}\u0000${key}`) ?? null; }
+  async putSetting(userId: Id, key: string, value: string) { this.settings.set(`${userId}\u0000${key}`, value); }
   dismissed: Array<{ userId: Id; key: string; at: string }> = [];
   async listDismissedSignals(userId: Id) { return this.dismissed.filter((d) => d.userId === userId).map((d) => d.key); }
   async dismissSignal(userId: Id, key: string, at: string) { if (!this.dismissed.some((d) => d.userId === userId && d.key === key)) this.dismissed.push({ userId, key, at }); }
+  async listAudit(userId: Id) { return this.audit.filter((a) => a.userId === userId).map((a) => ({ ...a })); }
+  async deleteAllUserData(userId: Id) {
+    this.profiles = this.profiles.filter((p) => p.userId !== userId);
+    this.accounts = this.accounts.filter((a) => a.userId !== userId);
+    this.categories = this.categories.filter((c) => c.userId !== userId);
+    this.people = this.people.filter((p) => p.userId !== userId);
+    this.budgets = this.budgets.filter((b) => b.userId !== userId);
+    this.recurringRules = this.recurringRules.filter((r) => r.userId !== userId);
+    this.goals = this.goals.filter((g) => g.userId !== userId);
+    this.transactions = this.transactions.filter((t) => t.userId !== userId);
+    this.audit = this.audit.filter((a) => a.userId !== userId);
+    this.dismissed = this.dismissed.filter((d) => d.userId !== userId);
+    for (const k of [...this.settings.keys()]) if (k.startsWith(`${userId}\u0000`)) this.settings.delete(k);
+  }
   async listRecurringRules(userId: Id) { return this.recurringRules.filter((r) => r.userId === userId).map((r) => ({ ...r })); }
   async putRecurringRule(userId: Id, r: RecurringRule) { own(userId, r); upsert(this.recurringRules, r); }
   async listGoals(userId: Id) { return this.goals.filter((g) => g.userId === userId).map((g) => ({ ...g })); }

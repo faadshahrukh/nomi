@@ -88,6 +88,22 @@ export class SqlLedgerRepository implements LedgerRepository {
 
   async deleteBudget(userId: Id, id: Id) { await this.db.run('DELETE FROM budgets WHERE user_id = ? AND id = ?', [userId, id]); }
 
+  async listAudit(userId: Id): Promise<AuditEntry[]> {
+    return (await this.db.all<Row>('SELECT * FROM audit_log WHERE user_id = ? ORDER BY at, id', [userId])).map((r) => ({
+      id: s(r.id!), userId: s(r.user_id!), entity: 'transaction', entityId: s(r.entity_id!), action: s(r.action!) as AuditEntry['action'], at: s(r.at!),
+      changedFields: JSON.parse(s(r.changed_fields!)) as string[], before: r.before_json ? JSON.parse(s(r.before_json)) : null, after: r.after_json ? JSON.parse(s(r.after_json)) : null }));
+  }
+  async deleteAllUserData(userId: Id) {
+    await this.db.transaction(async () => {
+      for (const t of ['transactions', 'audit_log', 'budgets', 'recurring_rules', 'goals', 'people', 'accounts', 'profiles', 'dismissed_signals', 'settings']) await this.db.run(`DELETE FROM ${t} WHERE user_id = ?`, [userId]);
+      await this.db.run('DELETE FROM categories WHERE user_id = ?', [userId]);
+    });
+  }
+  async getSetting(userId: Id, key: string): Promise<string | null> {
+    const [r] = await this.db.all<Row>('SELECT value FROM settings WHERE user_id = ? AND key = ?', [userId, key]);
+    return r ? s(r.value!) : null;
+  }
+  async putSetting(userId: Id, key: string, value: string) { await this.db.run('INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (?,?,?)', [userId, key, value]); }
   async listDismissedSignals(userId: Id): Promise<string[]> { return (await this.db.all<Row>('SELECT key FROM dismissed_signals WHERE user_id = ?', [userId])).map((r) => s(r.key!)); }
   async dismissSignal(userId: Id, key: string, at: string) { await this.db.run('INSERT OR IGNORE INTO dismissed_signals (user_id, key, at) VALUES (?,?,?)', [userId, key, at]); }
 

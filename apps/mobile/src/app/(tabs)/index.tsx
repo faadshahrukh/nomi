@@ -32,7 +32,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <HomeHeader now={appNow()} today={ready?.summary.today ?? ''} name={ready?.snapshot.profile.displayName ?? null} demo={mode === 'demo' && !!ready}
-        onNotifications={() => toast.show({ message: 'Notifications arrive in a later milestone.', tone: 'info' })} onProfile={() => router.push('/profile')} />
+        onNotifications={() => router.push('/radar')} onProfile={() => router.push('/profile')} />
       <CaptureFlow />
 
       {state.status === 'loading' ? <HomeSkeleton /> : null}

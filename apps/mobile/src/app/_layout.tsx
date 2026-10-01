@@ -15,6 +15,7 @@ import { MAX_CONTENT_WIDTH } from '@/design/tokens';
 import { NetworkProvider } from '@/providers/NetworkProvider';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { LedgerProvider, useLedger } from '@/data/LedgerProvider';
+import { useReminderScheduler } from '@/notifications/useReminderScheduler';
 import { ToastProvider } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TAB_BAR_HEIGHT } from '@/components/nav/TabBar';
@@ -36,6 +37,7 @@ function OnboardingGate() {
 }
 
 function Frame() {
+  useReminderScheduler();
   const { colors, scheme } = useTheme();
   return (
     // On wide screens (web, tablets) the app stays a centred phone-width column.
