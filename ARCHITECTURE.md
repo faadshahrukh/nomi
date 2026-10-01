@@ -12,7 +12,7 @@ Status key: **[built]** exists and is tested, **[planned]** decided but not impl
 | Backend | Supabase: Postgres + Row Level Security + Auth + Edge Functions **[built as code and tested without live services; not deployed]** | RLS gives the user/tenant boundary at the database. Edge Functions hold the LLM key. |
 | LLM | Claude via a server-side Edge Function, structured output **[built, not run live]** | The key never ships in the app; only names and the user's text are sent. |
 | Sign-in | Supabase Auth: email + password (verified email, password reset) and Google **[adapter built and tested against a stub; sign-in screens built (onboarding step and Profile); not run against a live backend]** | Decided with the product owner. Both resolve to one user; the same verified email links to one account, not two. |
-| Speech to text | Platform speech recognition on device first, text fallback **[planned]** | No raw audio leaves the device or is stored. Supports `bn-BD` and `en`. |
+| Speech to text | Platform speech recognition (expo-speech-recognition) with a typed fallback **[built; verified with a scripted recogniser, not on a device; needs a development build, not Expo Go]** | No raw audio leaves the device or is stored. Supports `bn-BD` and `en`. |
 
 These are recommendations made without a pre-existing codebase. They are cheap to change because the core depends on none of them.
 

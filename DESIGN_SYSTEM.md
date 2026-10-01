@@ -40,6 +40,8 @@ Header → Conversational Capture (headline "What happened with your money?", "T
 
 Idle (large mic) · Listening (waveform, label, Stop) · Processing · Understood (amount, category, date, account, merchant) · Ambiguous (one question) · Saved (confirmation + what changed) · Error (keep the transcript, allow retry or edit).
 
+Implemented as one sheet (`VoiceSheet`): getting ready · listening (waveform, live text, Stop) · finishing · heard (editable transcript, "Use this") · failed (denied, unavailable, no speech, network, language, interrupted), each keeping what was heard and offering a typed alternative. Retry is hidden when it cannot help.
+
 ## Components to build first
 
 App shell and navigation, capture input, voice recorder and waveform, interpretation card with field-level edit, confirmation card, Money Pulse, Safe to Spend, Radar item, transaction row and detail, account and category selectors, budget/goal progress, bottom sheet, toast, skeleton, empty and error states.

@@ -183,7 +183,7 @@ export function OnboardingFlow({ onDone }: { onDone: () => void }) {
 
         {step === 'try' ? (
           <View style={{ gap: space.lg }}>
-            <CaptureFlow onMic={() => toast.show({ message: "Voice capture isn't built yet. Type it for now.", tone: 'info' })} />
+            <CaptureFlow />
             {saved ? <Text variant="callout" tone="positive" accessibilityRole="alert">Nice, that's your first entry. It's now part of your balance and Safe to Spend.</Text> : null}
           </View>
         ) : null}

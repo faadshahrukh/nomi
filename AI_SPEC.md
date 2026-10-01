@@ -10,7 +10,7 @@ The model reads language and returns a structured proposal. Deterministic code p
 
 - **Built:** the schema, deterministic resolution and validation, the confirmation policy, the on-device `RuleBasedInterpreter`, and the app's capture flow. The rule-based interpreter is what runs today, so capture works offline.
 - **Built, not yet run live:** the Claude interpreter, its Edge Function and the app's client for it (milestone 5). Tested with stubs and on real Postgres, not against a live Anthropic account.
-- **Not built:** speech recognition (milestone 7).
+- **Speech recognition (milestone 7):** built as a port (`SpeechService`) over expo-speech-recognition. Transcripts go through the normal pipeline with source `voice`, so they always need a confirmation tap, and the review card shows what was heard beside the amount. Verified only with a scripted recogniser in a browser; not yet on a device.
 
 ## Claude interpreter (built, server-side)
 

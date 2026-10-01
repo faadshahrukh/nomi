@@ -39,8 +39,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 4 | Text capture end to end with a stub interpreter, confirmation card, field-level correction | **Done**. The "stub" is a real on-device rule-based interpreter (offline capable). Verified in a browser build; not yet on a device |
 | 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | **Done as code and tests; not deployed.** Needs your Supabase, Google and Anthropic accounts to run live. See supabase/README.md |
 | 6 | Onboarding (welcome, about/region, optional email or Google sign-up, goals, first account, confirmation preference, optional budget, first capture), accounts screen, sign-in/out/delete in Profile | **Done**. Verified end to end in a browser build in empty mode. Sign-in screens are untested against a live backend. Only the account is required; the rest can be skipped |
-| 7 (next) | Voice capture states and fallback | |
-| 8 | Transactions list: search, filters, detail, duplicate detection | |
+| 7 | Voice capture: permission, listening, finishing, editable transcript, and every failure with a typed way forward | **Done**. Verified in a browser build with a scripted recogniser. Real iOS/Android speech (including Bangla quality) is untested and needs a development build, not Expo Go |
+| 8 (next) | Transactions list: search, filters, detail, duplicate detection | |
 | 9 | Budgets, Money Pulse, Safe to Spend UI, What Changed UI | |
 | 10 | Recurring and Upcoming, Financial Radar V1 (deterministic signals, de-duplicated, capped) | |
 | 11 | Offline sync queue and conflict handling, notifications, privacy controls, export and delete | |
@@ -61,7 +61,6 @@ UI, data model, business logic, persistence, loading/error/empty/offline states,
 
 - Flow: type or tap an example, then a review card shows what was understood with every field tappable; one focused question appears when something needed is missing; Save is disabled until the core validator passes; saving shows Safe to Spend before and after, with Undo. Several transactions in one sentence become several cards. Failures keep the typed text and offer Try again and Enter details. A duplicate warning appears before saving a likely repeat.
 - Auto-save is implemented (single, typed, low-impact, high-confidence expense when the user opted in), always with Undo. The demo profile uses "always confirm", so it is not exercised in the UI yet; it is covered by core tests.
-- Voice is still a placeholder: the mic shows "Voice capture isn't built yet".
 - Known gaps: saved transactions cannot be edited or deleted from the ledger yet (milestone 8; Undo works right after saving); the rule-based interpreter is narrower than a language model; categories cannot be created in the editor; shared-expense splits other than equal cannot be edited by hand yet; capture needs an account, so a brand-new real ledger still needs onboarding (milestone 6).
 
 ## Design pass (between milestones 5 and 6)

@@ -65,11 +65,11 @@ export function useCapture() {
   const submit = useCallback(async (text: string, source: 'text' | 'voice' = 'text') => {
     if (!snapshot) return;
     batch.current = { entries: [], safeBefore: null };
-    dispatch({ type: 'submit', text });
+    dispatch({ type: 'submit', text, source });
     const outcome = await captureText({ text, source, snapshot, interpreter, now: appNow() });
     const only = outcome.status === 'ready' && outcome.proposals.length === 1 ? outcome.proposals[0]! : null;
     if (only && only.decision === 'auto_save' && only.draft && await persist('p0', only.editable, false, true)) return; // user opted in to auto-save: saved, with Undo
-    dispatch({ type: 'outcome', text, outcome });
+    dispatch({ type: 'outcome', text, source, outcome });
   }, [snapshot, interpreter, persist]);
 
   const startManual = useCallback(() => {

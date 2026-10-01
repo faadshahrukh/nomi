@@ -6,10 +6,36 @@
     "orientation": "portrait",
     "scheme": "nomi",
     "userInterfaceStyle": "automatic",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "app.nomi.mobile" },
-    "android": { "package": "app.nomi.mobile", "predictiveBackGestureEnabled": false },
-    "web": { "output": "single", "bundler": "metro" },
-    "plugins": ["expo-router", ["expo-splash-screen", { "backgroundColor": "#F4F6F9" }]],
-    "experiments": { "typedRoutes": true }
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.nomi.mobile"
+    },
+    "android": {
+      "package": "app.nomi.mobile",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F4F6F9"
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Nomi uses the microphone so you can say what you spent instead of typing it. Audio is turned into text on your phone and is never stored.",
+          "speechRecognitionPermission": "Nomi uses speech recognition to turn what you say into text. Nothing you say is saved."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

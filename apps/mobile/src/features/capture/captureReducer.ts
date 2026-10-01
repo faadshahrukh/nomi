@@ -16,18 +16,21 @@ export interface ReviewItem {
   error: string | null;
 }
 
+/** Typed text, or what voice recognition heard. Voice is shown beside the amount and always needs a confirmation tap. */
+export type CaptureSource = 'text' | 'voice';
+
 export interface SavedEntry { id: string; label: string; amountMinor: number }
 
 export type CaptureState =
   | { phase: 'idle' }
-  | { phase: 'processing'; text: string }
-  | { phase: 'review'; text: string; items: ReviewItem[]; interpretedBy: InterpreterKind | null }
-  | { phase: 'failed'; text: string; reason: 'unavailable' | 'invalid_output' | 'not_a_transaction' }
+  | { phase: 'processing'; text: string; source: CaptureSource }
+  | { phase: 'review'; text: string; source: CaptureSource; items: ReviewItem[]; interpretedBy: InterpreterKind | null }
+  | { phase: 'failed'; text: string; source: CaptureSource; reason: 'unavailable' | 'invalid_output' | 'not_a_transaction' }
   | { phase: 'saved'; entries: SavedEntry[]; safeBefore: number; safeAfter: number; currency: string };
 
 export type CaptureAction =
-  | { type: 'submit'; text: string }
-  | { type: 'outcome'; text: string; outcome: CaptureResult }
+  | { type: 'submit'; text: string; source: CaptureSource }
+  | { type: 'outcome'; text: string; source: CaptureSource; outcome: CaptureResult }
   | { type: 'manual'; draft: EditableDraft }
   | { type: 'edit'; key: string; draft: EditableDraft }
   | { type: 'discard'; key: string }
@@ -46,18 +49,18 @@ const newItem = (key: string, draft: EditableDraft, decision: ReviewItem['decisi
 /** Pure transitions for the capture flow. Everything asynchronous lives in the hook; this only decides what the screen shows. */
 export function captureReducer(state: CaptureState, a: CaptureAction): CaptureState {
   switch (a.type) {
-    case 'submit': return { phase: 'processing', text: a.text };
+    case 'submit': return { phase: 'processing', text: a.text, source: a.source };
     case 'reset': return initialCapture;
-    case 'manual': return { phase: 'review', text: '', items: [newItem('m1', a.draft, 'manual')], interpretedBy: null };
+    case 'manual': return { phase: 'review', text: '', source: 'text', items: [newItem('m1', a.draft, 'manual')], interpretedBy: null };
     case 'outcome': {
       const o = a.outcome;
-      if (o.status === 'unavailable') return { phase: 'failed', text: a.text, reason: 'unavailable' };
-      if (o.status === 'invalid_output') return { phase: 'failed', text: a.text, reason: 'invalid_output' };
-      if (o.status === 'not_a_transaction') return { phase: 'failed', text: a.text, reason: 'not_a_transaction' };
+      if (o.status === 'unavailable') return { phase: 'failed', text: a.text, source: a.source, reason: 'unavailable' };
+      if (o.status === 'invalid_output') return { phase: 'failed', text: a.text, source: a.source, reason: 'invalid_output' };
+      if (o.status === 'not_a_transaction') return { phase: 'failed', text: a.text, source: a.source, reason: 'not_a_transaction' };
       const items = o.proposals.map((p, i) => newItem(`p${i}`, p.editable, p.decision,
         { date: p.fields.date?.provenance === 'default', account: p.fields.account?.provenance === 'default' },
         p.decision === 'clarify' && !p.clarification?.field.match(/amount|purpose|account|to_account|person|goal|direction|date/)));
-      return { phase: 'review', text: a.text, items, interpretedBy: o.interpretedBy };
+      return { phase: 'review', text: a.text, source: a.source, items, interpretedBy: o.interpretedBy };
     }
     case 'edit': return mapItem(state, a.key, (i) => ({
       ...i, draft: a.draft, duplicate: null, allowDuplicate: false, error: null, unsure: false,

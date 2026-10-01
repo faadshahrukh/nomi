@@ -19,8 +19,10 @@ const isMove = (t: string) => t === 'transfer' || t === 'savings_contribution' |
  * "Here is what I understood." Every field is tappable, so a wrong reading is a one-field fix, never a retype.
  * The Save button stays disabled until the core validator is satisfied.
  */
-export function ReviewCard({ item, data, userId, ctx, onEdit, onSave, onSaveAnyway, onDiscard, showCount, interpretedBy }: {
+export function ReviewCard({ item, data, userId, ctx, onEdit, onSave, onSaveAnyway, onDiscard, showCount, interpretedBy, heard }: {
   item: ReviewItem; data: LedgerData; userId: string; ctx: EditorContext; showCount?: number; interpretedBy?: 'model' | 'device' | null;
+  /** Set when the text came from voice: shown beside the amount so a misheard number is easy to spot. */
+  heard?: string | null;
   onEdit: (item: ReviewItem, patch: Partial<EditableDraft>) => void; onSave: (item: ReviewItem) => void; onSaveAnyway: (item: ReviewItem) => void; onDiscard: (item: ReviewItem) => void;
 }) {
   const { colors } = useTheme();
@@ -45,6 +47,13 @@ export function ReviewCard({ item, data, userId, ctx, onEdit, onSave, onSaveAnyw
         {showCount && showCount > 1 ? <Badge label={`${showCount} to review`} tone="neutral" /> : null}
       </View>
 
+      {heard ? (
+        <Surface variant="accent" padding="md" style={{ gap: 2 }}>
+          <Text variant="caption" weight="bold" style={{ color: colors.onAccentSoft }}>YOU SAID</Text>
+          <Text variant="callout" style={{ color: colors.onAccentSoft }}>“{heard}”</Text>
+          <Text variant="caption" style={{ color: colors.onAccentSoft }}>Voice can mishear numbers. Check the amount, then confirm.</Text>
+        </Surface>
+      ) : null}
       {conversational && interpretedBy ? (
         <Text variant="caption" tone="muted">{interpretedBy === 'model' ? 'Understood with AI. Check it before saving.' : 'Understood on this device.'}</Text>
       ) : null}

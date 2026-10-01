@@ -25,7 +25,6 @@ export default function HomeScreen() {
   const toast = useToast();
   const router = useRouter();
   const { state, mode, retry } = useLedger();
-  const voiceLater = () => toast.show({ message: "Voice capture isn't built yet. Type it for now.", tone: 'info' });
   const [addingAccount, setAddingAccount] = useState(false);
   const ready = state.status === 'ready' ? state : null;
 
@@ -33,7 +32,7 @@ export default function HomeScreen() {
     <Screen>
       <HomeHeader now={appNow()} today={ready?.summary.today ?? ''} name={ready?.snapshot.profile.displayName ?? null} demo={mode === 'demo' && !!ready}
         onNotifications={() => toast.show({ message: 'Notifications arrive in a later milestone.', tone: 'info' })} onProfile={() => router.push('/profile')} />
-      <CaptureFlow onMic={voiceLater} />
+      <CaptureFlow />
 
       {state.status === 'loading' ? <HomeSkeleton /> : null}
       {state.status === 'error' ? <ErrorState title="Couldn't load your money" message="Your data is safe on this device. Try again." onRetry={retry} /> : null}
