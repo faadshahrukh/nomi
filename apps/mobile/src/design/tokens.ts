@@ -53,11 +53,11 @@ export const MIN_TOUCH = 44;
 
 export type FontWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold';
 export const fontFamily: Record<FontWeight, string> = {
-  regular: 'PlusJakartaSans_400Regular',
-  medium: 'PlusJakartaSans_500Medium',
-  semibold: 'PlusJakartaSans_600SemiBold',
-  bold: 'PlusJakartaSans_700Bold',
-  extrabold: 'PlusJakartaSans_800ExtraBold',
+  regular: 'Manrope_400Regular',
+  medium: 'Manrope_500Medium',
+  semibold: 'Manrope_600SemiBold',
+  bold: 'Manrope_700Bold',
+  extrabold: 'Manrope_800ExtraBold',
 };
 
 /** Bengali face. Also supplies the taka sign (৳), which Latin UI fonts lack and render small from a fallback font. */

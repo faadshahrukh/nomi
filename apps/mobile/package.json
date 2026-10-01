@@ -13,8 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.2",
     "@expo-google-fonts/noto-sans-bengali": "^0.4.4",
-    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@nomi/core": "*",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",

@@ -4,9 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
-  useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
+  useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import {
   NotoSansBengali_400Regular, NotoSansBengali_500Medium, NotoSansBengali_600SemiBold, NotoSansBengali_700Bold, NotoSansBengali_800ExtraBold,
 } from '@expo-google-fonts/noto-sans-bengali';
@@ -39,7 +38,7 @@ function Frame() {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold,
+    Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Manrope_800ExtraBold,
     NotoSansBengali_400Regular, NotoSansBengali_500Medium, NotoSansBengali_600SemiBold, NotoSansBengali_700Bold, NotoSansBengali_800ExtraBold,
   });
   const ready = loaded || !!error; // a font failure falls back to the system font rather than blocking the app
