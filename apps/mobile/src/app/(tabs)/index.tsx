@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { space } from '@/design/tokens';
 import { appNow } from '@/data/clock';
 import { useLedger } from '@/data/LedgerProvider';
+import { AddAccountSheet } from '@/features/accounts/AddAccountSheet';
 import { CaptureFlow } from '@/features/capture/CaptureFlow';
 import { HomeHeader } from '@/features/home/HomeHeader';
 import { HomeSkeleton } from '@/features/home/HomeSkeleton';
@@ -24,6 +26,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { state, mode, retry } = useLedger();
   const voiceLater = () => toast.show({ message: "Voice capture isn't built yet. Type it for now.", tone: 'info' });
+  const [addingAccount, setAddingAccount] = useState(false);
   const ready = state.status === 'ready' ? state : null;
 
   return (
@@ -38,7 +41,7 @@ export default function HomeScreen() {
       {ready && !ready.summary.hasAccounts ? (
         <Surface padding="xl" rounded="xl">
           <EmptyState icon="wallet" title="Add your first account" message="A cash wallet, bank account or bKash is enough to start. Then your balance, Safe to Spend and insights appear here."
-            actionLabel="Add an account" onAction={() => toast.show({ message: "Accounts aren't built yet. They arrive with onboarding.", tone: 'info' })} />
+            actionLabel="Add an account" onAction={() => setAddingAccount(true)} />
         </Surface>
       ) : null}
 
@@ -59,6 +62,7 @@ export default function HomeScreen() {
           </View>
         </View>
       ) : null}
+      {ready ? <AddAccountSheet visible={addingAccount} currency={ready.snapshot.profile.currency} onClose={() => setAddingAccount(false)} /> : null}
     </Screen>
   );
 }

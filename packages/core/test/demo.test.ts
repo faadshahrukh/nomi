@@ -198,3 +198,14 @@ describe('home extras: balance trend and signal', () => {
     expect(buildHomeSummary(calm, TODAY).signal).toBeNull();
   });
 });
+
+describe('account balances for the Accounts screen', () => {
+  it('lists every live account with the same balance the ledger computes', () => {
+    const d = snapshotOf();
+    const s = buildHomeSummary(d, TODAY);
+    expect(s.accountBalances.map((a) => a.account.name).sort()).toEqual(['Cash', 'City Bank', 'Savings', 'bKash']);
+    for (const { account, balanceMinor } of s.accountBalances) expect(balanceMinor).toBe(accountBalance(account, d.transactions));
+    const archived = { ...d, accounts: d.accounts.map((a) => (a.name === 'Cash' ? { ...a, archivedAt: 'x' } : a)) };
+    expect(buildHomeSummary(archived, TODAY).accountBalances.map((a) => a.account.name)).not.toContain('Cash');
+  });
+});

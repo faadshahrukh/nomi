@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { TransactionService, buildHomeSummary, todayIn, type HomeSummary, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { ACCOUNT_ISSUE_MESSAGES, TransactionService, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
 type State =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; snapshot: LedgerSnapshot; summary: HomeSummary };
+  | { status: 'ready'; snapshot: LedgerSnapshot; summary: HomeSummary; /** A fresh real ledger that has not finished setup. Never true for demo data. */ needsOnboarding: boolean };
 
 interface LedgerValue {
   state: State;
@@ -21,6 +21,10 @@ interface LedgerValue {
   undo: (id: string) => Promise<HomeSummary | null>;
   /** Saves a change to the user's settings (for example the AI-processing choice) and reloads. */
   updateProfile: (patch: Partial<Omit<Profile, 'userId'>>) => Promise<void>;
+  /** Validates and saves a new account. The first account becomes the default. Returns the problems instead of throwing for bad input. */
+  addAccount: (input: NewAccountInput) => Promise<{ ok: true; account: Account } | { ok: false; issues: AccountIssue[]; messages: string[] }>;
+  /** Sets (or replaces) the overall monthly budget. */
+  setOverallBudget: (amountMinor: number) => Promise<void>;
   /** Full reload with the loading state, for the error screen's Retry button. */
   retry: () => void;
 }
@@ -38,14 +42,15 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
     try {
       const repo = await openRepository(m);
       const userId = userIdFor(m);
-      const [profile, accounts, categories, people, transactions, budgets, recurringRules, goals] = await Promise.all([
+      const [stored, accounts, categories, people, transactions, budgets, recurringRules, goals] = await Promise.all([
         repo.getProfile(userId), repo.listAccounts(userId), repo.listCategories(userId), repo.listPeople(userId), repo.listTransactions(userId),
         repo.listBudgets(userId), repo.listRecurringRules(userId), repo.listGoals(userId),
       ]);
+      const profile = stored;
       const snapshot: LedgerSnapshot = { profile: profile ?? fallbackProfile(userId), accounts, categories, people, transactions, budgets, recurringRules, goals };
       const today = todayIn(snapshot.profile.timezone, appNow());
       const summary = buildHomeSummary(snapshot, today);
-      setState({ status: 'ready', snapshot, summary });
+      setState({ status: 'ready', snapshot, summary, needsOnboarding: m === 'real' && (!stored || !stored.onboardedAt) });
       return summary;
     } catch {
       // Deliberately no error details: storage errors can contain SQL with financial values.
@@ -72,6 +77,26 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       if (state.status !== 'ready') throw new Error('Ledger is not ready');
       const repo = await openRepository(mode);
       await repo.putProfile(userIdFor(mode), { ...state.snapshot.profile, ...patch, userId: userIdFor(mode) });
+      await load(mode, true);
+    },
+    addAccount: async (input) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const profile = state.snapshot.profile;
+      const { issues, openingBalanceMinor } = validateNewAccount(input, state.snapshot.accounts, profile.currency);
+      if (issues.length || openingBalanceMinor === null) return { ok: false, issues, messages: issues.map((i) => ACCOUNT_ISSUE_MESSAGES[i]) };
+      const repo = await openRepository(mode);
+      const account = buildAccount(userIdFor(mode), Crypto.randomUUID(), input, profile.currency, openingBalanceMinor);
+      await repo.putAccount(userIdFor(mode), account);
+      if (!profile.defaultAccountId) await repo.putProfile(userIdFor(mode), { ...profile, defaultAccountId: account.id, userId: userIdFor(mode) });
+      await load(mode, true);
+      return { ok: true, account };
+    },
+    setOverallBudget: async (amountMinor) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error('Budget must be a positive amount');
+      const repo = await openRepository(mode);
+      const existing = state.snapshot.budgets.find((b) => b.categoryId === null);
+      await repo.putBudget(userIdFor(mode), { id: existing?.id ?? Crypto.randomUUID(), userId: userIdFor(mode), categoryId: null, amountMinor, currency: state.snapshot.profile.currency });
       await load(mode, true);
     },
     undo: async (id) => {

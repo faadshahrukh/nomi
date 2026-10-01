@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { space } from '@/design/tokens';
@@ -6,7 +7,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { config } from '@/config';
 import { useLedger } from '@/data/LedgerProvider';
 import type { DataMode } from '@/data/repositories';
-import { Icon, ListRow, Screen, SectionHeader, Segmented, Surface, Text, useToast } from '@/components/ui';
+import { Button, Icon, ListRow, Screen, SectionHeader, Segmented, Surface, Text, useToast } from '@/components/ui';
 import { radius } from '@/design/tokens';
 
 export const SHOW_DEV_TOOLS = __DEV__ || process.env.EXPO_PUBLIC_DEV_TOOLS === '1';
@@ -17,6 +18,7 @@ export default function Profile() {
   const router = useRouter();
   const { mode, setMode, state, updateProfile } = useLedger();
   const { colors } = useTheme();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const name = state.status === 'ready' ? state.snapshot.profile.displayName : null;
   const auth = useAuth();
   const aiOn = state.status === 'ready' ? state.snapshot.profile.aiProcessing : true;
@@ -59,9 +61,32 @@ export default function Profile() {
       </View>
 
       <View style={{ gap: space.xs }}>
+        <SectionHeader title="Account" />
+        <Surface padding="sm" style={{ gap: space.xs }}>
+          {auth.status === 'signedIn' ? (
+            <>
+              <ListRow icon="user" title="Sign out" subtitle="Your data stays on this device" showChevron onPress={() => { auth.service.signOut().catch(() => toast.show({ message: "Couldn't sign out. Try again.", tone: 'error' })); }} />
+              {confirmDelete ? (
+                <View style={{ padding: space.md, gap: space.sm }}>
+                  <Text variant="bodyStrong">Delete your account?</Text>
+                  <Text variant="callout" tone="muted">This permanently erases your account and everything stored on the server. This cannot be undone.</Text>
+                  <View style={{ flexDirection: 'row', gap: space.sm }}>
+                    <Button label="Cancel" variant="secondary" onPress={() => setConfirmDelete(false)} />
+                    <Button label="Delete account" variant="danger" onPress={() => { auth.service.deleteAccount().then(() => setConfirmDelete(false)).catch(() => toast.show({ message: "Couldn't delete the account. Try again.", tone: 'error' })); }} />
+                  </View>
+                </View>
+              ) : <ListRow icon="alert" title="Delete account" subtitle="Erase your account and server data" showChevron onPress={() => setConfirmDelete(true)} />}
+            </>
+          ) : (
+            <ListRow icon="user" title="Sign in or create an account" subtitle={config.backendConfigured ? 'Optional. Turns on AI understanding.' : "Not set up in this version"} showChevron onPress={() => router.push('/auth')} />
+          )}
+        </Surface>
+      </View>
+
+      <View style={{ gap: space.xs }}>
         <SectionHeader title="Settings" />
         <Surface padding="sm">
-          <ListRow icon="wallet" title="Accounts" subtitle="Cash, bank, cards, mobile wallets" showChevron onPress={later('Accounts')} />
+          <ListRow icon="wallet" title="Accounts" subtitle="Cash, bank, cards, mobile wallets" showChevron onPress={() => router.push('/accounts')} />
           <ListRow icon="tag" title="Categories" subtitle="Edit how spending is grouped" showChevron onPress={later('Categories')} />
           <ListRow icon="bell" title="Notifications" subtitle="Only what is worth your attention" showChevron onPress={later('Notifications')} />
           <ListRow icon="shield" title="App lock and data retention" subtitle="Coming soon" showChevron onPress={later('App lock')} />

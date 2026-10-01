@@ -38,8 +38,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 3 | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | **Done**. Verified in a browser build with an in-memory store; the SQLite adapter has not run on a device yet. Also made Transactions, Planning and Insights read-only views of the same data so no tab contradicts Home |
 | 4 | Text capture end to end with a stub interpreter, confirmation card, field-level correction | **Done**. The "stub" is a real on-device rule-based interpreter (offline capable). Verified in a browser build; not yet on a device |
 | 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | **Done as code and tests; not deployed.** Needs your Supabase, Google and Anthropic accounts to run live. See supabase/README.md |
-| 6 (next) | Onboarding (sign-up/sign-in with email or Google) and first transaction | |
-| 7 | Voice capture states and fallback | |
+| 6 | Onboarding (welcome, about/region, optional email or Google sign-up, goals, first account, confirmation preference, optional budget, first capture), accounts screen, sign-in/out/delete in Profile | **Done**. Verified end to end in a browser build in empty mode. Sign-in screens are untested against a live backend. Only the account is required; the rest can be skipped |
+| 7 (next) | Voice capture states and fallback | |
 | 8 | Transactions list: search, filters, detail, duplicate detection | |
 | 9 | Budgets, Money Pulse, Safe to Spend UI, What Changed UI | |
 | 10 | Recurring and Upcoming, Financial Radar V1 (deterministic signals, de-duplicated, capped) | |

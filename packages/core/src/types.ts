@@ -80,6 +80,10 @@ export interface Profile {
   aiProcessing: boolean;
   /** What the app calls the user in greetings. Collected during onboarding; null until then. */
   displayName: string | null;
+  /** What the user said they want from the app (keys from PRIMARY_GOALS). Used to tailor suggestions. */
+  primaryGoals: string[];
+  /** When onboarding was completed. Null means it still needs to run. */
+  onboardedAt: string | null;
 }
 
 export interface LedgerData {

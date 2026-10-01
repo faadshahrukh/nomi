@@ -16,3 +16,6 @@ export * from './demo';
 export * from './homeSummary';
 export * from './draft';
 export * from './capture';
+export * from './regions';
+export * from './accounts';
+export * from './onboarding';

@@ -1,7 +1,7 @@
 import { addDays, addMonths, endOfMonth, startOfMonth, type LocalDate } from './dates';
 import { budgetStatus, type BudgetStatus } from './budgets';
 import { goalSavedMinor } from './goals';
-import { incomeTotal, liquidBalanceOn, netSpending } from './ledger';
+import { accountBalance, incomeTotal, liquidBalanceOn, netSpending } from './ledger';
 import { occurrences, upcomingObligations, type UpcomingItem } from './recurring';
 import { safeToSpend, type SafeToSpend } from './safeToSpend';
 import { whatChanged, type WhatChanged } from './whatChanged';
@@ -60,6 +60,8 @@ export interface HomeSummary {
   recent: RecentItem[];
   goals: GoalProgress[];
   recurring: RecurringSummary[];
+  /** Every live account with its current balance, for the Accounts screen. */
+  accountBalances: Array<{ account: Account; balanceMinor: number }>;
 }
 
 export const UPCOMING_WINDOW_DAYS = 14;
@@ -107,6 +109,7 @@ export function buildHomeSummary(snap: LedgerSnapshot, today: LocalDate): HomeSu
       return { goal: g, savedMinor: saved, ratio: g.targetMinor > 0 ? Math.min(1, saved / g.targetMinor) : 0,
         reservedThisMonthMinor: sts.goalReserves.find((r) => r.goalId === g.id)?.reservedMinor ?? 0 };
     }),
+    accountBalances: snap.accounts.filter((a) => !a.archivedAt).map((a) => ({ account: a, balanceMinor: accountBalance(a, txs) })),
     recurring: snap.recurringRules.filter((r) => r.active).map((r) => ({ rule: r, nextDate: occurrences(r, today, addDays(today, 400))[0] ?? null }))
       .sort((a, b) => (a.nextDate ?? '9999').localeCompare(b.nextDate ?? '9999')),
   };

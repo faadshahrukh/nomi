@@ -60,7 +60,7 @@ export function buildDemoData(today: LocalDate, timezone = 'Asia/Dhaka'): DemoDa
     { id: 'demo-r-electricity', userId, name: 'Electricity', type: 'expense', amountMinor: bdt(2500), currency: 'BDT', accountId: A.bkash, categoryId: C.electricity, frequency: 'monthly', interval: 1, anchorDate: dayOf(18), endDate: null, isBill: true, active: true },
     { id: 'demo-r-streaming', userId, name: 'Streaming', type: 'expense', amountMinor: bdt(600), currency: 'BDT', accountId: A.bank, categoryId: C.streaming, frequency: 'monthly', interval: 1, anchorDate: dayOf(22), endDate: null, isBill: true, active: true },
   ];
-  const profile: Profile = { userId, country: 'BD', currency: 'BDT', timezone, locale: 'mixed', confirmationPref: 'always_confirm', highImpactMinor: bdt(10000), safetyBufferMinor: bdt(5000), retainRawInput: false, defaultAccountId: A.cash, aiProcessing: true, displayName: 'Alex' };
+  const profile: Profile = { userId, country: 'BD', currency: 'BDT', timezone, locale: 'mixed', confirmationPref: 'always_confirm', highImpactMinor: bdt(10000), safetyBufferMinor: bdt(5000), retainRawInput: false, defaultAccountId: A.cash, aiProcessing: true, displayName: 'Alex', primaryGoals: ['track_spending', 'budget'], onboardedAt: `${today}T00:00:00.000Z` };
 
   const txs: Transaction[] = [];
   let seq = 0;

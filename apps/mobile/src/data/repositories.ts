@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import {
-  DEMO_USER_ID, InMemoryLedgerRepository, SqlLedgerRepository, migrate, seedDemoData, seedSystemCategories, todayIn,
+  DEMO_USER_ID, InMemoryLedgerRepository, SqlLedgerRepository, buildProfile, migrate, regionForTimezone, seedDemoData, seedSystemCategories, todayIn,
   type LedgerRepository, type Profile,
 } from '@nomi/core';
 import { appNow } from './clock';
@@ -19,10 +19,10 @@ export const defaultDataMode = (): DataMode =>
     ? process.env.EXPO_PUBLIC_DATA_MODE
     : __DEV__ ? 'demo' : 'real';
 
-/** Profile used before onboarding has saved one. Not persisted. */
+/** Profile used before onboarding has saved one: the device's own region and timezone. Not persisted. */
 export function fallbackProfile(userId: string): Profile {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Dhaka';
-  return { userId, country: 'BD', currency: 'BDT', timezone: tz, locale: 'mixed', confirmationPref: 'always_confirm', highImpactMinor: 1_000_000, safetyBufferMinor: 0, retainRawInput: false, defaultAccountId: null, aiProcessing: true, displayName: null };
+  return buildProfile(userId, regionForTimezone(tz), { timezone: tz });
 }
 
 const cache = new Map<DataMode, Promise<LedgerRepository>>();

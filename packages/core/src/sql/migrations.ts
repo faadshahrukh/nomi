@@ -65,6 +65,8 @@ export const MIGRATIONS: string[] = [
   `ALTER TABLE profiles ADD COLUMN ai_processing INTEGER NOT NULL DEFAULT 1;`,
   // 3: display name for greetings
   `ALTER TABLE profiles ADD COLUMN display_name TEXT;`,
+  // 4: onboarding
+  `ALTER TABLE profiles ADD COLUMN primary_goals TEXT NOT NULL DEFAULT '[]'; ALTER TABLE profiles ADD COLUMN onboarded_at TEXT;`,
 ];
 
 /** Brings a database up to the latest schema. Safe to call on every launch. */

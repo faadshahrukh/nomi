@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,12 +14,26 @@ import { ThemeProvider, useTheme } from '@/design/theme';
 import { MAX_CONTENT_WIDTH } from '@/design/tokens';
 import { NetworkProvider } from '@/providers/NetworkProvider';
 import { AuthProvider } from '@/auth/AuthProvider';
-import { LedgerProvider } from '@/data/LedgerProvider';
+import { LedgerProvider, useLedger } from '@/data/LedgerProvider';
 import { ToastProvider } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TAB_BAR_HEIGHT } from '@/components/nav/TabBar';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+/** Sends a new real user to setup, and back out once it is finished. Demo data never needs setup. */
+function OnboardingGate() {
+  const { state } = useLedger();
+  const pathname = usePathname();
+  const router = useRouter();
+  const need = state.status === 'ready' ? state.needsOnboarding : null;
+  useEffect(() => {
+    if (need === null) return;
+    if (need && pathname !== '/onboarding') router.replace('/onboarding');
+    else if (!need && pathname === '/onboarding') router.replace('/');
+  }, [need, pathname, router]);
+  return null;
+}
 
 function Frame() {
   const { colors, scheme } = useTheme();
@@ -30,6 +44,7 @@ function Frame() {
         <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
         <ErrorBoundary>
           <ToastProvider bottomOffset={TAB_BAR_HEIGHT}>
+            <OnboardingGate />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
           </ToastProvider>
         </ErrorBoundary>
