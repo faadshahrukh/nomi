@@ -10,10 +10,11 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 
 | Area | State |
 |---|---|
-| Deterministic finance core (`packages/core`) | **Built and tested** (131 tests, including the real SQL run against SQLite) |
+| Deterministic finance core (`packages/core`) | **Built and tested** (190 tests, including the real SQL run against SQLite and the server schema run on real Postgres) |
 | On-device storage (SQLite), demo data, Home summary | **Built**. Native only; web preview uses an in-memory store |
 | AI interpretation contract, validation, confirmation policy | **Built and tested**. An on-device rule-based interpreter is the live interpreter; the Claude adapter is not built |
 | Text capture end to end (type, review, correct, save, undo) | **Built** in the app |
+| Server: Postgres schema with row-level security, Claude interpreter Edge Function, sign-in adapter (email + Google), AI privacy setting | **Built and tested without live services**. Needs your Supabase, Google and Anthropic accounts to connect (see `supabase/README.md`). No sign-in screens yet (milestone 6) |
 | Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (read-only), Planning (read-only) and Insights (What changed) reading real stored data. Text capture works. Voice, onboarding, auth and editing saved records are not built |
 | Backend (Supabase), auth, sync | Not started |
 | Voice capture | Not started |
@@ -25,6 +26,7 @@ See `DEVELOPMENT_PLAN.md` for the order of work and `ARCHITECTURE.md` for how th
 
 ```
 apps/mobile       Expo (React Native) app for iOS, Android and web preview. UI only; all money logic comes from @nomi/core.
+supabase/         Server as code: migrations, Edge Function, config. See supabase/README.md.
 packages/core     Pure TypeScript domain logic. No UI, network, storage or LLM calls. Shared by mobile and the future web app.
 ARCHITECTURE.md  DATABASE_SCHEMA.md  AI_SPEC.md  DESIGN_SYSTEM.md  DEVELOPMENT_PLAN.md
 ```

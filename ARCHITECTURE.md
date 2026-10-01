@@ -9,9 +9,9 @@ Status key: **[built]** exists and is tested, **[planned]** decided but not impl
 | Mobile | Expo (React Native) + TypeScript, Expo Router **[planned]** | One codebase for iOS and Android; shares TypeScript domain code with a later web app. |
 | Domain logic | `packages/core`, pure TypeScript **[built]** | Testable without a device; reusable by web. |
 | On-device store | SQLite via `expo-sqlite` **[built, native only]** | Offline capture; fast lists. Web preview uses an in-memory repository. |
-| Backend | Supabase: Postgres + Row Level Security + Auth + Edge Functions **[planned]** | RLS gives the user/tenant boundary at the database. Edge Functions hold the LLM key. |
-| LLM | Claude via a server-side Edge Function, structured output **[planned]** | The key never ships in the app; only names and the user's text are sent. |
-| Sign-in | Supabase Auth: email + password (verified email, password reset) and Google **[planned]** | Decided with the product owner. Both resolve to one user; the same verified email links to one account, not two. |
+| Backend | Supabase: Postgres + Row Level Security + Auth + Edge Functions **[built as code and tested without live services; not deployed]** | RLS gives the user/tenant boundary at the database. Edge Functions hold the LLM key. |
+| LLM | Claude via a server-side Edge Function, structured output **[built, not run live]** | The key never ships in the app; only names and the user's text are sent. |
+| Sign-in | Supabase Auth: email + password (verified email, password reset) and Google **[adapter built and tested against a stub; no sign-in screens yet]** | Decided with the product owner. Both resolve to one user; the same verified email links to one account, not two. |
 | Speech to text | Platform speech recognition on device first, text fallback **[planned]** | No raw audio leaves the device or is stored. Supports `bn-BD` and `en`. |
 
 These are recommendations made without a pre-existing codebase. They are cheap to change because the core depends on none of them.
@@ -120,10 +120,20 @@ The UI must show these components next to the number. `available` can be negativ
 - Offline: client-generated ids, `version`, soft deletes and `updatedAt` are in place for sync **[built]**; the sync queue and conflict UI are **[planned]**. An unsent capture is kept in a local queue and never discarded **[planned]**.
 - Logging rule: never log amounts, merchants, notes, transcripts or names. Analytics events carry counts and timings only.
 
-## Authentication **[planned]**
+## Server (`supabase/`) **[built, not deployed]**
 
+- **Schema** (`migrations/`): mirrors the on-device schema, owned by `auth.users` with cascade, composite `(user_id, id)` keys so a row can never reference another user's row, database-level checks for money, transfers, loans, repayments and splits (same meaning as `validateTransaction`), a version-bump rule against lost updates, soft deletes, an append-only audit log.
+- **Row-level security** on every public table (a test fails if any table lacks it). Anonymous callers have no privileges. System categories are readable by all and writable by none.
+- **Functions:** `consume_ai_quota` (server only), `export_my_data` (the caller's data as JSON), `delete_my_account` (cascades to everything the user owns).
+- **Edge Function `interpret`**: see AI_SPEC.md. Logic in `packages/core` (testable without Deno), thin wiring in `supabase/functions/interpret/index.ts`. The server code is not exported to the app bundle (a test checks).
+- **Tested** against real PostgreSQL via PGlite: `packages/core/test/db.rls.test.ts`. Not yet deployed or run with the Supabase CLI.
+- Setup, secrets and the first-deploy checklist: `supabase/README.md`.
+
+## Authentication **[adapter built; screens in milestone 6]**
+
+- Implemented in `apps/mobile/src/auth`: `AuthService` port, a Supabase adapter (email + password with confirmation and reset, Google through Supabase's hosted OAuth flow with PKCE, sign-out, account deletion), safe error codes (no provider message ever reaches the screen), a session store that splits the session across secure-store entries, and a not-configured stand-in so the app still runs locally. Sign-up never reveals whether an address already exists.
 - Methods in MVP: email + password with email verification and password reset, and Google. No phone OTP, Apple or other providers yet.
-- Google on mobile uses the native Google sign-in flow and exchanges the Google ID token with Supabase (`signInWithIdToken`). This needs OAuth client IDs for iOS, Android and web from a Google Cloud project, supplied by the product owner.
+- Google uses Supabase's hosted OAuth flow in the system browser (needs only a Google *web* client configured in the Supabase dashboard; works in Expo Go; no Google SDK in the app). A native Google sign-in with `signInWithIdToken` can replace it later for a smoother experience.
 - The mobile app holds only the Supabase anon key plus the user's session. The session is stored in the device keychain/keystore (`expo-secure-store`), not AsyncStorage. Tokens refresh automatically; on expiry the app keeps unsent captures in the local queue and prompts for sign-in without discarding them.
 - Optional app lock (biometric/PIN) is a separate local gate and does not replace the session.
 - To verify before App Store submission: Apple's rules for apps that offer a third-party sign-in such as Google (guideline 4.8) may require an additional privacy-preserving option such as Sign in with Apple.

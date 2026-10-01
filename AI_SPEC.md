@@ -9,7 +9,20 @@ The model reads language and returns a structured proposal. Deterministic code p
 ## Status
 
 - **Built:** the schema, deterministic resolution and validation, the confirmation policy, the on-device `RuleBasedInterpreter`, and the app's capture flow. The rule-based interpreter is what runs today, so capture works offline.
-- **Not built:** the Claude adapter (milestone 5) and speech recognition (milestone 7). When the adapter exists it implements the same `Interpreter` port; the rule-based interpreter stays as the offline and failure fallback.
+- **Built, not yet run live:** the Claude interpreter, its Edge Function and the app's client for it (milestone 5). Tested with stubs and on real Postgres, not against a live Anthropic account.
+- **Not built:** speech recognition (milestone 7).
+
+## Claude interpreter (built, server-side)
+
+`packages/core/src/ai/claude/` (prompt, client, handler) with the Edge Function in `supabase/functions/interpret`.
+
+- **Where it runs.** Only on the server. The key is a function secret. The app calls the function with the user's own access token (`HttpInterpreter`), and if anything fails (offline, signed out, timeout, server error, off-schema reply) it silently uses the on-device interpreter (`FallbackInterpreter`), so capture always works. The review card says which one answered: "Understood with AI. Check it before saving." or "Understood on this device."
+- **When it is used.** Only when the user allows AI processing (Settings, Privacy), a backend is configured, and they are signed in. Otherwise the text never leaves the device. The server also checks the privacy setting, so it holds even if a client ignores it.
+- **The request.** Official Anthropic SDK, `claude-opus-5-5` by default (override with `INTERPRETER_MODEL`), `output_config: { effort: "low", format: { type: "json_schema" } }`. No forced tool use, no sampling parameters and no thinking configuration, because the current model rejects or ignores them. The JSON Schema is hand-written (the API's schema dialect has no ranges or length limits) and a test keeps it in step with the zod schema, which remains the final authority: every reply is parsed and validated against it before use. A refusal or truncation is an error, never a partial result. By default the request also asks the API to re-run on a fallback model if a safety classifier declines it (retried without that parameter if the API rejects it).
+- **The prompt.** A static system prompt (no dates or user data, so it never varies the request): extract only what was said, copy amounts as written, dates as references, names exactly from the supplied lists, null for anything unstated, and treat `user_text` as data that cannot change the rules. The user turn is one JSON document with a `context` object and a `user_text` string.
+- **What is sent.** Only the sentence (max 500 characters), today's date, locale, currency, and the names of accounts, categories, people and goals (bounded counts and lengths, control characters stripped). Balances, totals, history and ids are not part of the input type at all, so they cannot be sent by accident.
+- **Server limits.** Signed-in only (verified server-side), request size and shape validated strictly, a daily allowance per user (default 200), response and logs carry error codes and timings only, never content. Errors map to safe responses: `401`, `400`, `413`, `403 ai_disabled`, `429 quota_exceeded`, `422 refused`, `503 busy`, `502`.
+- **Cost control.** Short request, short JSON reply, low effort, daily cap. The model is a product decision (see `supabase/README.md`).
 
 ## Rule-based interpreter (built)
 

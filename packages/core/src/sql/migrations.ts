@@ -61,6 +61,8 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX idx_audit_entity ON audit_log(user_id, entity_id);
   `,
+  // 2: privacy choice for AI processing (default on; the app only ever uses it for signed-in users)
+  `ALTER TABLE profiles ADD COLUMN ai_processing INTEGER NOT NULL DEFAULT 1;`,
 ];
 
 /** Brings a database up to the latest schema. Safe to call on every launch. */

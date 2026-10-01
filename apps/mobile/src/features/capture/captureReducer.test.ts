@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CaptureOutcome, EditableDraft, Transaction } from '@nomi/core';
+import type { CaptureResult, EditableDraft, Transaction } from '@nomi/core';
 import { captureReducer, initialCapture, type CaptureState } from './captureReducer';
 
 const draft = (over: Partial<EditableDraft> = {}): EditableDraft => ({ type: 'expense', amountMinor: 45_000, currency: 'BDT', localDate: '2025-03-15', source: 'text', accountId: 'a', categoryId: 'c', ...over });
@@ -7,7 +7,7 @@ const proposal = (decision: 'one_tap' | 'confirm' | 'clarify', over: Partial<{ c
   index: 0, draft: null, editable: draft(), issues: [], confidence: 0.9, decision, clarification: over.clarification ?? null,
   fields: { date: { value: 'x', confidence: 1, provenance: over.date ?? 'default' }, account: { value: 'a', confidence: 1, provenance: over.account ?? 'stated' } },
 }) as never;
-const ready = (...p: unknown[]): CaptureOutcome => ({ status: 'ready', proposals: p as never });
+const ready = (...p: unknown[]): CaptureResult => ({ status: 'ready', proposals: p as never, interpretedBy: 'device' });
 
 describe('capture reducer', () => {
   it('goes from idle to processing to review, marking what was assumed', () => {
@@ -20,7 +20,7 @@ describe('capture reducer', () => {
   });
   it('keeps the text and offers a way forward when interpretation fails', () => {
     for (const status of ['unavailable', 'invalid_output', 'not_a_transaction'] as const)
-      expect(captureReducer({ phase: 'processing', text: 'hi' }, { type: 'outcome', text: 'hi', outcome: { status } as CaptureOutcome })).toEqual({ phase: 'failed', text: 'hi', reason: status });
+      expect(captureReducer({ phase: 'processing', text: 'hi' }, { type: 'outcome', text: 'hi', outcome: { status, interpretedBy: null } as CaptureResult })).toEqual({ phase: 'failed', text: 'hi', reason: status });
   });
   it('a clarification with a missing field is shown for review, not as a failure', () => {
     const s = captureReducer(initialCapture, { type: 'outcome', text: 'Spent 5k', outcome: { status: 'needs_clarification', clarification: { field: 'purpose', question: 'q', proposalIndex: null }, proposals: [proposal('clarify', { clarification: { field: 'purpose' } })] } as never });

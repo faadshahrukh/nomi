@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ConflictError, ForbiddenError, InMemoryLedgerRepository, MIGRATIONS, NotFoundError, TransactionService, ValidationError, accountBalances, migrate,
+  ConflictError, ForbiddenError, InMemoryLedgerRepository, MIGRATIONS, NotFoundError, SqlLedgerRepository, TransactionService, ValidationError, accountBalances, migrate,
   type LedgerRepository,
 } from '../src';
 import { accounts, categories, expense, OTHER, USER } from './fixtures';
@@ -86,6 +86,21 @@ describe.each(makers)('%s repository contract', (_name, make) => {
 });
 
 describe('sqlite-specific guarantees', () => {
+  it('stores the AI-processing choice, defaulting to on', async () => {
+    const repo = await sqlRepo();
+    const base = { userId: USER, country: 'BD', currency: 'BDT', timezone: 'Asia/Dhaka', locale: 'mixed' as const, confirmationPref: 'always_confirm' as const, highImpactMinor: 1, safetyBufferMinor: 0, retainRawInput: false, defaultAccountId: null };
+    await repo.putProfile(USER, { ...base, aiProcessing: true });
+    expect((await repo.getProfile(USER))!.aiProcessing).toBe(true);
+    await repo.putProfile(USER, { ...base, aiProcessing: false });
+    expect((await repo.getProfile(USER))!.aiProcessing).toBe(false);
+  });
+  it('upgrades a version-1 database without losing profiles', async () => {
+    const db = nodeSqlDb();
+    await db.exec(MIGRATIONS[0]!); await db.exec('PRAGMA user_version = 1');
+    await db.run(`INSERT INTO profiles (user_id,country,currency,timezone,locale,confirmation_pref,high_impact_minor,safety_buffer_minor,retain_raw_input) VALUES ('u','BD','BDT','Asia/Dhaka','mixed','always_confirm',1,0,0)`);
+    await migrate(db);
+    expect((await new SqlLedgerRepository(db).getProfile('u'))!.aiProcessing).toBe(true); // existing users keep the default
+  });
   it('migrates once and records the version', async () => {
     const db = nodeSqlDb();
     await migrate(db); await migrate(db);

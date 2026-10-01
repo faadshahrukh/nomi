@@ -76,6 +76,8 @@ export interface Profile {
   userId: Id; country: string; currency: CurrencyCode; timezone: string; locale: 'en' | 'bn' | 'mixed';
   confirmationPref: 'always_confirm' | 'auto_save_high_confidence';
   highImpactMinor: number; safetyBufferMinor: number; retainRawInput: boolean; defaultAccountId: Id | null;
+  /** The user's privacy choice: may the text of a message be sent to the AI service to be understood? Off means on-device rules only. */
+  aiProcessing: boolean;
 }
 
 export interface LedgerData {

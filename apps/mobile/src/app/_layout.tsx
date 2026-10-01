@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import { ThemeProvider, useTheme } from '@/design/theme';
 import { MAX_CONTENT_WIDTH } from '@/design/tokens';
 import { NetworkProvider } from '@/providers/NetworkProvider';
+import { AuthProvider } from '@/auth/AuthProvider';
 import { LedgerProvider } from '@/data/LedgerProvider';
 import { ToastProvider } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -49,9 +50,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <NetworkProvider>
-          <LedgerProvider>
-            <Frame />
-          </LedgerProvider>
+          <AuthProvider>
+            <LedgerProvider>
+              <Frame />
+            </LedgerProvider>
+          </AuthProvider>
         </NetworkProvider>
       </ThemeProvider>
     </SafeAreaProvider>

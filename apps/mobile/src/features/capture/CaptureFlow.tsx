@@ -42,7 +42,7 @@ export function CaptureFlow({ onMic }: { onMic: () => void }) {
 
       {state.phase === 'review' && ctx && cap.data
         ? state.items.map((item) => (
-          <ReviewCard key={item.key} item={item} data={cap.data!} userId={cap.userId} ctx={ctx} showCount={state.items.length}
+          <ReviewCard key={item.key} item={item} data={cap.data!} userId={cap.userId} ctx={ctx} showCount={state.items.length} interpretedBy={state.interpretedBy}
             onEdit={cap.edit} onSave={(i) => void cap.save(i)} onSaveAnyway={(i) => void cap.saveAnyway(i)} onDiscard={(i) => cap.discard(i.key)} />
         ))
         : null}

@@ -20,6 +20,8 @@ export interface HandlerDeps {
   interpreter: Interpreter;
   /** Resolves the signed-in user from the request, or null. Verified server-side, never trusted from the body. */
   authenticate(req: Request): Promise<{ userId: string } | null>;
+  /** Whether this user allows AI processing (their privacy setting). Checked server-side so it holds even if a client ignores it. Defaults to allowed. */
+  aiEnabled?(userId: string): Promise<boolean>;
   /** Counts one use against the user's daily allowance. Returns false when it is used up. */
   consumeQuota(userId: string): Promise<boolean>;
   /** Receives event codes and timings only. Never request or response content. */
@@ -32,7 +34,7 @@ export const MAX_BODY_BYTES = 16 * 1024;
 
 /**
  * The Edge Function's logic, free of Deno and Supabase APIs so it can be tested. Order matters:
- * method, size, authentication, validation, quota, then the model call. Responses carry error codes, never content.
+ * method, size, authentication, validation, the user's privacy setting, quota, then the model call. Responses carry error codes, never content.
  */
 export async function handleInterpret(req: Request, deps: HandlerDeps): Promise<Response> {
   const now = deps.now ?? Date.now;
@@ -62,6 +64,8 @@ export async function handleInterpret(req: Request, deps: HandlerDeps): Promise<
   try { json = JSON.parse(raw); } catch { return reply(400, { error: 'bad_request' }); }
   const body = InterpretRequestSchema.safeParse(json);
   if (!body.success) return reply(400, { error: 'bad_request' });
+
+  if (deps.aiEnabled && !(await deps.aiEnabled(user.userId).catch(() => true))) return reply(403, { error: 'ai_disabled' });
 
   const allowed = await deps.consumeQuota(user.userId).catch(() => false);
   if (!allowed) return reply(429, { error: 'quota_exceeded' });

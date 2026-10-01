@@ -37,8 +37,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 2 | Expo app shell: tokens, light/dark, navigation, reusable components, loading/empty/error/offline states | **Done**. Verified in a browser build in light and dark; not yet run on a phone or simulator |
 | 3 | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | **Done**. Verified in a browser build with an in-memory store; the SQLite adapter has not run on a device yet. Also made Transactions, Planning and Insights read-only views of the same data so no tab contradicts Home |
 | 4 | Text capture end to end with a stub interpreter, confirmation card, field-level correction | **Done**. The "stub" is a real on-device rule-based interpreter (offline capable). Verified in a browser build; not yet on a device |
-| 5 (next) | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | |
-| 6 | Onboarding (sign-up/sign-in with email or Google) and first transaction | |
+| 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | **Done as code and tests; not deployed.** Needs your Supabase, Google and Anthropic accounts to run live. See supabase/README.md |
+| 6 (next) | Onboarding (sign-up/sign-in with email or Google) and first transaction | |
 | 7 | Voice capture states and fallback | |
 | 8 | Transactions list: search, filters, detail, duplicate detection | |
 | 9 | Budgets, Money Pulse, Safe to Spend UI, What Changed UI | |
@@ -64,6 +64,14 @@ UI, data model, business logic, persistence, loading/error/empty/offline states,
 - Voice is still a placeholder: the mic shows "Voice capture isn't built yet".
 - Known gaps: saved transactions cannot be edited or deleted from the ledger yet (milestone 8; Undo works right after saving); the rule-based interpreter is narrower than a language model; categories cannot be created in the editor; shared-expense splits other than equal cannot be edited by hand yet; capture needs an account, so a brand-new real ledger still needs onboarding (milestone 6).
 
+## Milestone 5 notes
+
+- Built: the Postgres schema with row-level security and its real-Postgres test suite; the Claude interpreter, its Edge Function and the app's client, with on-device fallback; the sign-in adapter (email + Google), secure session storage and not-configured stand-in; the AI-processing privacy setting end to end (device, server, Settings screen); the "Understood with AI / on this device" label.
+- Nothing here has run against a live Supabase, Google or Anthropic account. The most likely first-run surprises are `config.toml` keys the CLI renames, the Google redirect URL setup, and the exact beta parameter for refusal fallbacks (it is retried without it automatically). The checklist in `supabase/README.md` is the way to find them.
+- The interpreter model defaults to the current Opus; choosing a cheaper model is the product owner's decision.
+- The privacy setting needs a profile row, so on a never-onboarded real ledger it is saved the first time it is changed.
+- Still to do for the server: sync between device and server (milestone 11), the sign-in screens (milestone 6), per-user export and delete screens (milestone 11).
+
 ## Not implemented yet, so do not assume it works
 
-Backend, auth, the Claude interpreter, voice, sync, notifications, Radar signals, creating accounts, budgets or goals, editing or deleting saved transactions, export, deletion, app lock.
+Deployed backend, sign-in screens, live AI, voice, sync, notifications, Radar signals, creating accounts, budgets or goals, editing or deleting saved transactions, export, deletion, app lock.

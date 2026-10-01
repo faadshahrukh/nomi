@@ -6,3 +6,8 @@ dist/
 !.env.example
 *.log
 coverage/
+
+# Supabase
+supabase/.env
+supabase/.temp/
+supabase/.branches/

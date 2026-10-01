@@ -1,8 +1,11 @@
 import { useCallback, useMemo, useReducer, useRef } from 'react';
 import {
-  RuleBasedInterpreter, captureText, finalizeDraft, findPossibleDuplicate, formatMoney, reviseDraft, validateDraft,
+  captureText, finalizeDraft, findPossibleDuplicate, formatMoney, reviseDraft, validateDraft,
   type EditableDraft, type LedgerData, type LedgerSnapshot,
 } from '@nomi/core';
+import { buildInterpreter } from '@/ai/buildInterpreter';
+import { useAuth } from '@/auth/AuthProvider';
+import { config } from '@/config';
 import { appNow } from '@/data/clock';
 import { useLedger } from '@/data/LedgerProvider';
 import { userIdFor } from '@/data/repositories';
@@ -20,7 +23,13 @@ const labelFor = (d: EditableDraft, snap: LedgerSnapshot): string => {
 export function useCapture() {
   const { state: ledger, mode, commit, undo: undoCommit } = useLedger();
   const [state, dispatch] = useReducer(captureReducer, initialCapture);
-  const interpreter = useMemo(() => new RuleBasedInterpreter(), []);
+  const auth = useAuth();
+  const aiAllowed = ledger.status === 'ready' ? ledger.snapshot.profile.aiProcessing : true;
+  // The AI service is used only for signed-in users who allow it; otherwise the message never leaves the device.
+  const interpreter = useMemo(() => buildInterpreter({
+    aiProcessing: aiAllowed, backendConfigured: auth.configured && config.backendConfigured, signedIn: auth.status === 'signedIn',
+    interpretUrl: config.interpretUrl, anonKey: config.supabaseAnonKey, getToken: auth.getToken,
+  }), [aiAllowed, auth.configured, auth.status, auth.getToken]);
   const batch = useRef<{ entries: SavedEntry[]; safeBefore: number | null }>({ entries: [], safeBefore: null });
   const snapshot = ledger.status === 'ready' ? ledger.snapshot : null;
   const userId = userIdFor(mode);

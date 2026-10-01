@@ -167,6 +167,15 @@ describe('Edge Function handler', () => {
     }
     expect(InterpretRequestSchema.safeParse(input).success).toBe(true);
   });
+  it('honours the user\'s AI-processing setting server-side, before spending quota or calling the model', async () => {
+    const interpret = vi.fn(); const consume = vi.fn(async () => true);
+    const res = await handleInterpret(post(input), deps({ aiEnabled: async () => false, consumeQuota: consume, interpreter: { interpret } as never }));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'ai_disabled' });
+    expect(interpret).not.toHaveBeenCalled(); expect(consume).not.toHaveBeenCalled();
+    expect((await handleInterpret(post(input), deps({ aiEnabled: async () => true }))).status).toBe(200);
+    expect((await handleInterpret(post(input), deps({ aiEnabled: async () => { throw new Error('db down'); } }))).status).toBe(200); // a settings lookup failure does not block capture
+  });
   it('enforces the daily allowance before calling the model', async () => {
     const interpret = vi.fn();
     const res = await handleInterpret(post(input), deps({ consumeQuota: async () => false, interpreter: { interpret } as never }));

@@ -1,4 +1,4 @@
-import type { CaptureOutcome, Decision, EditableDraft, Transaction } from '@nomi/core';
+import type { CaptureResult, Decision, EditableDraft, InterpreterKind, Transaction } from '@nomi/core';
 
 /** One transaction being reviewed. Several can be reviewed at once ("800 on groceries and 300 on Uber"). */
 export interface ReviewItem {
@@ -21,13 +21,13 @@ export interface SavedEntry { id: string; label: string; amountMinor: number }
 export type CaptureState =
   | { phase: 'idle' }
   | { phase: 'processing'; text: string }
-  | { phase: 'review'; text: string; items: ReviewItem[] }
+  | { phase: 'review'; text: string; items: ReviewItem[]; interpretedBy: InterpreterKind | null }
   | { phase: 'failed'; text: string; reason: 'unavailable' | 'invalid_output' | 'not_a_transaction' }
   | { phase: 'saved'; entries: SavedEntry[]; safeBefore: number; safeAfter: number; currency: string };
 
 export type CaptureAction =
   | { type: 'submit'; text: string }
-  | { type: 'outcome'; text: string; outcome: CaptureOutcome }
+  | { type: 'outcome'; text: string; outcome: CaptureResult }
   | { type: 'manual'; draft: EditableDraft }
   | { type: 'edit'; key: string; draft: EditableDraft }
   | { type: 'discard'; key: string }
@@ -48,7 +48,7 @@ export function captureReducer(state: CaptureState, a: CaptureAction): CaptureSt
   switch (a.type) {
     case 'submit': return { phase: 'processing', text: a.text };
     case 'reset': return initialCapture;
-    case 'manual': return { phase: 'review', text: '', items: [newItem('m1', a.draft, 'manual')] };
+    case 'manual': return { phase: 'review', text: '', items: [newItem('m1', a.draft, 'manual')], interpretedBy: null };
     case 'outcome': {
       const o = a.outcome;
       if (o.status === 'unavailable') return { phase: 'failed', text: a.text, reason: 'unavailable' };
@@ -57,7 +57,7 @@ export function captureReducer(state: CaptureState, a: CaptureAction): CaptureSt
       const items = o.proposals.map((p, i) => newItem(`p${i}`, p.editable, p.decision,
         { date: p.fields.date?.provenance === 'default', account: p.fields.account?.provenance === 'default' },
         p.decision === 'clarify' && !p.clarification?.field.match(/amount|purpose|account|to_account|person|goal|direction|date/)));
-      return { phase: 'review', text: a.text, items };
+      return { phase: 'review', text: a.text, items, interpretedBy: o.interpretedBy };
     }
     case 'edit': return mapItem(state, a.key, (i) => ({
       ...i, draft: a.draft, duplicate: null, allowDuplicate: false, error: null, unsure: false,

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { TransactionService, buildHomeSummary, todayIn, type HomeSummary, type LedgerSnapshot, type Transaction, type TransactionInput } from '@nomi/core';
+import { TransactionService, buildHomeSummary, todayIn, type HomeSummary, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
@@ -19,6 +19,8 @@ interface LedgerValue {
   commit: (input: TransactionInput) => Promise<{ transaction: Transaction; summary: HomeSummary | null }>;
   /** Soft-deletes a transaction (used by Undo) and reloads. */
   undo: (id: string) => Promise<HomeSummary | null>;
+  /** Saves a change to the user's settings (for example the AI-processing choice) and reloads. */
+  updateProfile: (patch: Partial<Omit<Profile, 'userId'>>) => Promise<void>;
   /** Full reload with the loading state, for the error screen's Retry button. */
   retry: () => void;
 }
@@ -65,6 +67,12 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       const service = new TransactionService(repo, { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone, retainRawInput: profile.retainRawInput });
       const transaction = await service.create(userIdFor(mode), input);
       return { transaction, summary: await load(mode, true) };
+    },
+    updateProfile: async (patch) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const repo = await openRepository(mode);
+      await repo.putProfile(userIdFor(mode), { ...state.snapshot.profile, ...patch, userId: userIdFor(mode) });
+      await load(mode, true);
     },
     undo: async (id) => {
       if (state.status !== 'ready') throw new Error('Ledger is not ready');
