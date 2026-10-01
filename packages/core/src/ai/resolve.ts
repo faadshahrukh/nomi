@@ -177,7 +177,7 @@ function resolveOne(p: ProposedTransaction, index: number, count: number, ctx: R
   const decision = decide({
     type: p.type, amountMinor, confidence, blockingIssue: hardIssue || clarification !== null, amountNotInInput,
     hasWarnings: issues.length > 0 || fields.category?.provenance === 'inferred', isShared: !!splits, proposalCount: count,
-    preference: ctx.preference, highImpactMinor: ctx.highImpactMinor,
+    preference: ctx.preference, highImpactMinor: ctx.highImpactMinor, source: ctx.source,
   });
   // Low confidence with nothing missing: ask about the weakest critical field.
   const finalClar = decision === 'clarify' && !clarification ? { field: 'unclear' as ClarifyField, question: Q.unclear, proposalIndex: count > 1 ? index : null } : clarification;

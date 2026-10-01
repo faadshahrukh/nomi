@@ -1,4 +1,4 @@
-import type { TransactionType } from '../types';
+import type { TransactionSource, TransactionType } from '../types';
 
 /** What the UI should do with a proposed transaction. */
 export type Decision = 'clarify' | 'confirm' | 'one_tap' | 'auto_save';
@@ -13,6 +13,7 @@ export interface PolicyInput {
   type: TransactionType; amountMinor: number | null; confidence: number;
   blockingIssue: boolean; amountNotInInput: boolean; hasWarnings: boolean; isShared: boolean;
   proposalCount: number; preference: ConfirmationPreference; highImpactMinor?: number;
+  source?: TransactionSource;
 }
 
 /**
@@ -24,6 +25,8 @@ export interface PolicyInput {
  *  - 0.7 <= confidence < 0.9                     -> confirm (show interpretation, user taps Save)
  *  - confidence >= 0.9                           -> one_tap, or auto_save when ALL hold:
  *      user opted in, plain personal expense, no warnings, single proposal.
+ *  - voice input: never better than confirm. Speech recognition can mishear numbers, so the user always
+ *    sees what was heard and taps Save (editing the amount first if it is wrong).
  */
 export function decide(p: PolicyInput): Decision {
   if (p.blockingIssue || p.amountMinor == null) return 'clarify';
@@ -31,6 +34,7 @@ export function decide(p: PolicyInput): Decision {
   if (p.amountMinor >= (p.highImpactMinor ?? DEFAULT_HIGH_IMPACT_MINOR)) return 'confirm';
   if (p.confidence < MEDIUM_CONFIDENCE) return 'clarify';
   if (p.confidence < HIGH_CONFIDENCE) return 'confirm';
+  if (p.source === 'voice') return 'confirm';
   const autoOk = p.preference === 'auto_save_high_confidence' && p.type === 'expense' && !p.isShared && !p.hasWarnings && p.proposalCount === 1;
   return autoOk ? 'auto_save' : 'one_tap';
 }

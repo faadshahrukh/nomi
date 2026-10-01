@@ -115,6 +115,17 @@ describe('resolution and confirmation policy', () => {
     expect(ok.proposals[0]!.draft).toMatchObject({ type: 'transfer', accountId: 'bank', toAccountId: 'bkash' });
     expect(ok.proposals[0]!.decision).toBe('confirm'); // 10,000 is at the high-impact line
   });
+  it('voice input always needs a confirmation tap, even at high confidence with auto-save on', () => {
+    const r = resolveInterpretation(wrap(base()), ctx('Spent 450 on lunch', { source: 'voice', preference: 'auto_save_high_confidence' }));
+    if (r.status !== 'ready') throw new Error(r.status);
+    expect(r.proposals[0]!.decision).toBe('confirm');
+    expect(r.proposals[0]!.draft).not.toBeNull(); // draft is shown for review and editing, never saved silently
+  });
+  it('spoken amount in words is not guessed: the user is asked to enter it', () => {
+    const r = resolveInterpretation(wrap(base({ amountText: 'four hundred fifty' })), ctx('spent four hundred fifty on lunch', { source: 'voice' }));
+    if (r.status !== 'needs_clarification') throw new Error(r.status);
+    expect(r.clarification.field).toBe('amount');
+  });
   it('rejects future dates', () => {
     const r = resolveInterpretation(wrap(base({ date: { kind: 'absolute', date: '2025-04-01' } })), ctx('Spent 450 on lunch on April 1'));
     expect(r.status).toBe('needs_clarification');
@@ -132,6 +143,8 @@ describe('policy table', () => {
     expect(decide({ ...p, preference: 'auto_save_high_confidence' })).toBe('auto_save');
     expect(decide({ ...p, preference: 'auto_save_high_confidence', type: 'income' })).toBe('one_tap');
     expect(decide({ ...p, preference: 'auto_save_high_confidence', hasWarnings: true })).toBe('one_tap');
+    expect(decide({ ...p, source: 'voice' })).toBe('confirm');
+    expect(decide({ ...p, source: 'voice', blockingIssue: true })).toBe('clarify');
   });
 });
 

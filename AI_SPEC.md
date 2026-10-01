@@ -45,7 +45,7 @@ Absent on purpose: ids, numeric amounts, computed dates, balances, free-text ans
 
 1. Output that fails the schema is discarded. The UI keeps the user's text and offers manual entry.
 2. `amountText` must contain exactly one amount. Supported: English and Bangla digits, commas incl. lakh style, `k`, `thousand`, `lakh/lac`, `crore`, `হাজার`, `লাখ`, `কোটি`.
-3. **Input-presence guard**: the parsed amount must equal an amount found in the user's own text. If not, the proposal is capped at confidence 0.5 and always needs explicit confirmation. (Spoken number words such as "four fifty" currently trigger this path.)
+3. **Input-presence guard**: the parsed amount must equal an amount found in the user's own text. If not, the proposal is capped at confidence 0.5 and always needs explicit confirmation. 
 4. Dates are resolved against the user's timezone "today". A date the user did not give defaults to today and is labelled `default`. Future dates are rejected. Invalid absolute dates are rejected.
 5. Accounts match by name, alias (case-insensitive, Bangla aliases supported) or substring. An unknown named account is a question, never an invention. With no account stated: the only account, else the user's default, else ask. A shared expense paid by someone else needs no account.
 6. An unknown category name leaves the transaction uncategorised and lowers certainty. It never maps to a guessed category.
@@ -54,15 +54,11 @@ Absent on purpose: ids, numeric amounts, computed dates, balances, free-text ans
 9. An expense with an amount but no category, merchant or note triggers the `purpose` question ("What was the 5,000 for?").
 10. Multiple transactions in one input are proposed and decided individually.
 
-## Spoken amounts (proposed, not built)
+## Voice and spoken amounts (decided)
 
-Platform speech recognition usually writes spoken numbers as digits ("450", "5,000"), so most voice input already passes the guard. When it returns words, the guard currently sees no amount and forces confirmation, which is safe but adds a tap. Recommended next step, in `extractAmounts`:
+Every voice capture needs an explicit confirmation tap, every time, regardless of confidence or the user's auto-save preference. Speech recognition can mishear numbers, so the confirmation card shows the transcript beside the parsed amount, and the amount (and every other field) is editable before saving. Typed input follows the normal policy below.
 
-1. Parse unambiguous number words in English (`four hundred fifty`, `five thousand`, `two lakh`, `one and a half thousand`) and Bangla (`দুই হাজার`, `পাঁচ শো`, `দেড় হাজার`), with unit tests for each.
-2. Keep colloquial shortcuts ambiguous on purpose. "Four fifty" could be 450, 4.50 or 4,050. Do not guess: ask "Was that ৳450?" using the leading candidate, requiring one tap.
-3. Always show the heard transcript beside the parsed amount so a misheard digit is visible.
-
-The guard stays in place regardless; word parsing only widens what counts as "the user said this amount".
+Number words are not parsed. If the transcript contains an amount only as words ("four hundred fifty") and no digits, the app does not guess; it asks "How much was it?" and the user types it. Platform recognisers usually return digits, so this is the uncommon path. Number-word parsing can be added later without changing this rule.
 
 ## Confidence and confirmation policy
 
@@ -75,7 +71,8 @@ Per-proposal confidence = min of the model's confidence for type, amount, date, 
 | Amount ≥ high-impact threshold (default BDT 10,000, user setting) | `confirm`, never auto-saved |
 | Confidence < 0.7 | `clarify` |
 | 0.7 ≤ confidence < 0.9 | `confirm`: show interpretation, user taps Save |
-| Confidence ≥ 0.9 | `one_tap`, or `auto_save` only if the user chose auto-save **and** it is a personal expense, a single proposal, with no warnings |
+| Confidence ≥ 0.9 | `one_tap`, or `auto_save` only if the user chose auto-save **and** it is a typed personal expense, a single proposal, with no warnings |
+| Any voice capture that would otherwise be `one_tap` or `auto_save` | `confirm` |
 
 Income, transfers, loans, shared expenses and multi-transaction inputs are never auto-saved.
 

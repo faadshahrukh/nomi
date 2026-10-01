@@ -17,12 +17,12 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 7. Platform speech recognition on device for voice; Claude server-side for interpretation.
 8. Raw text and transcripts are not retained unless the user opts in.
 9. Sign-in is email + password and Google, via Supabase Auth. No phone OTP or other providers in MVP. (Confirmed by the product owner.)
-10. Subscription and paywall are out of the MVP. (Confirmed by the product owner.) No billing code, plan tiers or entitlement checks until it is scheduled.
+10. Voice captures always require a confirmation tap, with the amount editable. Number words are not parsed; the user types the amount if needed. (Confirmed by the product owner.)
+11. Subscription and paywall are out of the MVP. (Confirmed by the product owner.) No billing code, plan tiers or entitlement checks until it is scheduled.
 
 ## Open questions that affect later milestones
 
 - Google Cloud OAuth client IDs (iOS, Android, web) and a Supabase project, needed at milestone 5.
-- Spoken number words (see AI_SPEC.md, "Spoken amounts"): recommended approach is written down, awaiting a decision.
 - Safety-buffer default and whether to propose one at onboarding.
 - Acceptable Bangla speech-recognition quality on mid-range Android devices; may need a server-side fallback.
 - Notification channel and quiet hours for Radar.
