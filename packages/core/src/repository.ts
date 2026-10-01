@@ -1,3 +1,4 @@
+import type { OutboxChange, OutboxItem, SyncConflict, SyncStore } from './sync/types';
 import type { Account, AuditEntry, Budget, Category, Goal, Id, Person, Profile, RecurringRule, Transaction } from './types';
 
 export class NotFoundError extends Error { constructor(what: string) { super(`${what} not found`); this.name = 'NotFoundError'; } }
@@ -9,7 +10,7 @@ export class ForbiddenError extends Error { constructor() { super('Record belong
  * Implementations: SqlLedgerRepository (on-device SQLite), InMemoryLedgerRepository (tests, web preview),
  * and later a server-side Postgres implementation protected by row-level security.
  */
-export interface LedgerRepository {
+export interface LedgerRepository extends SyncStore {
   getProfile(userId: Id): Promise<Profile | null>;
   putProfile(userId: Id, profile: Profile): Promise<void>;
 
@@ -74,6 +75,27 @@ export class InMemoryLedgerRepository implements LedgerRepository {
   async listBudgets(userId: Id) { return this.budgets.filter((b) => b.userId === userId).map((b) => ({ ...b })); }
   async putBudget(userId: Id, b: Budget) { own(userId, b); upsert(this.budgets, b); }
   async deleteBudget(userId: Id, id: Id) { this.budgets = this.budgets.filter((b) => !(b.userId === userId && b.id === id)); }
+  outbox: Array<OutboxItem & { userId: Id }> = []; conflicts: SyncConflict[] = []; private outboxSeq = 0;
+  async enqueueChange(userId: Id, c: OutboxChange, now: string) {
+    const cur = this.outbox.find((o) => o.userId === userId && o.entity === c.entity && o.entityId === c.entityId);
+    const payload = JSON.parse(JSON.stringify(c.payload));
+    if (cur) { cur.op = c.op; cur.payload = payload; cur.rev += 1; cur.attempts = 0; return; }
+    this.outbox.push({ userId, seq: ++this.outboxSeq, entity: c.entity, entityId: c.entityId, op: c.op, baseVersion: c.baseVersion, payload, rev: 1, attempts: 0, createdAt: now });
+  }
+  async listOutbox(userId: Id, limit = 100) { return this.outbox.filter((o) => o.userId === userId).sort((a, b) => a.seq - b.seq).slice(0, limit).map(({ userId: _u, ...o }) => JSON.parse(JSON.stringify(o)) as OutboxItem); }
+  async completeOutbox(userId: Id, seq: number, rev: number, serverVersion: number | null) {
+    const i = this.outbox.findIndex((o) => o.userId === userId && o.seq === seq);
+    if (i < 0) return;
+    if (this.outbox[i]!.rev === rev) this.outbox.splice(i, 1); else { this.outbox[i]!.baseVersion = serverVersion; this.outbox[i]!.attempts = 0; }
+  }
+  async failOutbox(userId: Id, seq: number) { const o = this.outbox.find((x) => x.userId === userId && x.seq === seq); if (o) o.attempts += 1; }
+  async dropOutbox(userId: Id, entity: OutboxItem['entity'], entityId: Id) { this.outbox = this.outbox.filter((o) => !(o.userId === userId && o.entity === entity && o.entityId === entityId)); }
+  async rebaseOutbox(userId: Id, entity: OutboxItem['entity'], entityId: Id, baseVersion: number) { const o = this.outbox.find((x) => x.userId === userId && x.entity === entity && x.entityId === entityId); if (o) o.baseVersion = baseVersion; }
+  async listConflicts(userId: Id) { return this.conflicts.filter((c) => c.userId === userId).map((c) => JSON.parse(JSON.stringify(c)) as SyncConflict); }
+  async putConflict(userId: Id, c: SyncConflict) { await this.removeConflict(userId, c.id); this.conflicts.push(JSON.parse(JSON.stringify(c))); }
+  async removeConflict(userId: Id, id: Id) { this.conflicts = this.conflicts.filter((c) => !(c.userId === userId && c.id === id)); }
+  async putTransactionRaw(userId: Id, tx: Transaction) { own(userId, tx); upsert(this.transactions, tx); }
+  async setTransactionVersion(userId: Id, id: Id, version: number) { const t = this.transactions.find((x) => x.userId === userId && x.id === id); if (t) t.version = version; }
   settings = new Map<string, string>();
   async getSetting(userId: Id, key: string) { return this.settings.get(`${userId}\u0000${key}`) ?? null; }
   async putSetting(userId: Id, key: string, value: string) { this.settings.set(`${userId}\u0000${key}`, value); }
@@ -92,6 +114,8 @@ export class InMemoryLedgerRepository implements LedgerRepository {
     this.transactions = this.transactions.filter((t) => t.userId !== userId);
     this.audit = this.audit.filter((a) => a.userId !== userId);
     this.dismissed = this.dismissed.filter((d) => d.userId !== userId);
+    this.outbox = this.outbox.filter((o) => o.userId !== userId);
+    this.conflicts = this.conflicts.filter((c) => c.userId !== userId);
     for (const k of [...this.settings.keys()]) if (k.startsWith(`${userId}\u0000`)) this.settings.delete(k);
   }
   async listRecurringRules(userId: Id) { return this.recurringRules.filter((r) => r.userId === userId).map((r) => ({ ...r })); }

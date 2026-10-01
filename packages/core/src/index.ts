@@ -20,6 +20,7 @@ export * from './recurringInput';
 export * from './radar';
 export * from './exportData';
 export * from './reminders';
+export * from './sync';
 export * from './capture';
 export * from './regions';
 export * from './accounts';

@@ -71,6 +71,15 @@ export const MIGRATIONS: string[] = [
   `CREATE TABLE dismissed_signals (user_id TEXT NOT NULL, key TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (user_id, key));`,
   // 6: device-local settings (reminder time, sync position). Never leaves the device.
   `CREATE TABLE settings (user_id TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (user_id, key));`,
+  // 7: sync queue and conflicts waiting for the user's decision
+  `CREATE TABLE sync_outbox (
+     seq INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, entity TEXT NOT NULL, entity_id TEXT NOT NULL, op TEXT NOT NULL,
+     base_version INTEGER, payload TEXT NOT NULL, rev INTEGER NOT NULL DEFAULT 1, attempts INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+     UNIQUE (user_id, entity, entity_id)
+   );
+   CREATE TABLE sync_conflicts (
+     user_id TEXT NOT NULL, id TEXT NOT NULL, local_json TEXT NOT NULL, remote_json TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (user_id, id)
+   );`,
 ];
 
 /** Brings a database up to the latest schema. Safe to call on every launch. */

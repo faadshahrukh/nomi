@@ -1,4 +1,5 @@
 import { ConflictError, ForbiddenError, NotFoundError, type LedgerRepository } from '../repository';
+import type { OutboxChange, OutboxItem, SyncConflict } from '../sync/types';
 import type { Account, AuditEntry, Budget, Category, Goal, Id, Person, Profile, RecurringRule, Transaction } from '../types';
 import type { SqlDb, SqlValue } from './db';
 
@@ -95,10 +96,38 @@ export class SqlLedgerRepository implements LedgerRepository {
   }
   async deleteAllUserData(userId: Id) {
     await this.db.transaction(async () => {
-      for (const t of ['transactions', 'audit_log', 'budgets', 'recurring_rules', 'goals', 'people', 'accounts', 'profiles', 'dismissed_signals', 'settings']) await this.db.run(`DELETE FROM ${t} WHERE user_id = ?`, [userId]);
+      for (const t of ['transactions', 'audit_log', 'budgets', 'recurring_rules', 'goals', 'people', 'accounts', 'profiles', 'dismissed_signals', 'settings', 'sync_outbox', 'sync_conflicts']) await this.db.run(`DELETE FROM ${t} WHERE user_id = ?`, [userId]);
       await this.db.run('DELETE FROM categories WHERE user_id = ?', [userId]);
     });
   }
+  async enqueueChange(userId: Id, c: OutboxChange, now: string) {
+    const payload = JSON.stringify(c.payload);
+    const { changes } = await this.db.run('UPDATE sync_outbox SET op = ?, payload = ?, rev = rev + 1, attempts = 0 WHERE user_id = ? AND entity = ? AND entity_id = ?', [c.op, payload, userId, c.entity, c.entityId]);
+    if (changes === 0) await this.db.run('INSERT INTO sync_outbox (user_id, entity, entity_id, op, base_version, payload, rev, attempts, created_at) VALUES (?,?,?,?,?,?,1,0,?)', [userId, c.entity, c.entityId, c.op, c.baseVersion, payload, now]);
+  }
+  async listOutbox(userId: Id, limit = 100): Promise<OutboxItem[]> {
+    return (await this.db.all<Row>('SELECT * FROM sync_outbox WHERE user_id = ? ORDER BY seq LIMIT ?', [userId, limit])).map((r) => ({
+      seq: n(r.seq!), entity: s(r.entity!) as OutboxItem['entity'], entityId: s(r.entity_id!), op: s(r.op!) as OutboxItem['op'], baseVersion: nn(r.base_version!),
+      payload: JSON.parse(s(r.payload!)), rev: n(r.rev!), attempts: n(r.attempts!), createdAt: s(r.created_at!) }));
+  }
+  async completeOutbox(userId: Id, seq: number, rev: number, serverVersion: number | null) {
+    const { changes } = await this.db.run('DELETE FROM sync_outbox WHERE user_id = ? AND seq = ? AND rev = ?', [userId, seq, rev]);
+    if (changes === 0) await this.db.run('UPDATE sync_outbox SET base_version = ?, attempts = 0 WHERE user_id = ? AND seq = ?', [serverVersion, userId, seq]);
+  }
+  async failOutbox(userId: Id, seq: number) { await this.db.run('UPDATE sync_outbox SET attempts = attempts + 1 WHERE user_id = ? AND seq = ?', [userId, seq]); }
+  async dropOutbox(userId: Id, entity: OutboxItem['entity'], entityId: Id) { await this.db.run('DELETE FROM sync_outbox WHERE user_id = ? AND entity = ? AND entity_id = ?', [userId, entity, entityId]); }
+  async rebaseOutbox(userId: Id, entity: OutboxItem['entity'], entityId: Id, baseVersion: number) { await this.db.run('UPDATE sync_outbox SET base_version = ? WHERE user_id = ? AND entity = ? AND entity_id = ?', [baseVersion, userId, entity, entityId]); }
+  async listConflicts(userId: Id): Promise<SyncConflict[]> {
+    return (await this.db.all<Row>('SELECT * FROM sync_conflicts WHERE user_id = ? ORDER BY created_at, id', [userId])).map((r) => ({
+      id: s(r.id!), userId: s(r.user_id!), local: JSON.parse(s(r.local_json!)), remote: JSON.parse(s(r.remote_json!)), createdAt: s(r.created_at!) }));
+  }
+  async putConflict(userId: Id, c: SyncConflict) { await this.db.run('INSERT OR REPLACE INTO sync_conflicts (user_id, id, local_json, remote_json, created_at) VALUES (?,?,?,?,?)', [userId, c.id, JSON.stringify(c.local), JSON.stringify(c.remote), c.createdAt]); }
+  async removeConflict(userId: Id, id: Id) { await this.db.run('DELETE FROM sync_conflicts WHERE user_id = ? AND id = ?', [userId, id]); }
+  async putTransactionRaw(userId: Id, tx: Transaction) {
+    own(userId, tx.userId);
+    await this.db.run(`INSERT OR REPLACE INTO transactions (${TX_COLS.join(', ')}) VALUES (${TX_COLS.map(() => '?').join(',')})`, txParams(tx));
+  }
+  async setTransactionVersion(userId: Id, id: Id, version: number) { await this.db.run('UPDATE transactions SET version = ? WHERE user_id = ? AND id = ?', [version, userId, id]); }
   async getSetting(userId: Id, key: string): Promise<string | null> {
     const [r] = await this.db.all<Row>('SELECT value FROM settings WHERE user_id = ? AND key = ?', [userId, key]);
     return r ? s(r.value!) : null;
