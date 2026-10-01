@@ -82,7 +82,7 @@ export function OnboardingFlow({ onDone }: { onDone: () => void }) {
   const saved = snapshot.transactions.length > 0;
 
   const choice = (selected: boolean, label: string, hint: string, onPress: () => void) => (
-    <Pressable key={label} accessibilityRole="button" aria-selected={selected} accessibilityLabel={`${label}. ${hint}`} onPress={onPress}
+    <Pressable key={label} accessibilityRole="button" aria-pressed={selected} accessibilityLabel={`${label}. ${hint}`} onPress={onPress}
       style={{ minHeight: 64, borderRadius: radius.lg, padding: space.lg, borderWidth: selected ? 2 : 1, borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accentSoft : colors.surface, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
       <View style={{ flex: 1 }}><Text variant="bodyStrong" style={selected ? { color: colors.onAccentSoft } : undefined}>{label}</Text><Text variant="callout" tone="muted">{hint}</Text></View>
       {selected ? <Icon name="check" size={22} color={colors.accent} /> : null}

@@ -28,7 +28,7 @@ export function MoneyPulseCard({ summary, onDetails }: { summary: HomeSummary; o
           <Icon name="insights" size={18} color="#FFFFFF" />
           <Text variant="bodyStrong" tone="onForest" accessibilityRole="header">Money Pulse</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="View details" onPress={onDetails} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+        <Pressable accessibilityRole="button" accessibilityLabel="View details" onPress={onDetails} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, minHeight: 44, paddingLeft: space.md }}>
           <Text variant="caption" weight="semibold" tone="onForest">View details</Text>
           <Icon name="chevronRight" size={14} color="#FFFFFF" />
         </Pressable>

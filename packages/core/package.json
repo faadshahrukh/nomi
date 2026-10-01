@@ -8,7 +8,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "gen:seed": "vite-node scripts/write-category-seed.ts"
+    "gen:seed": "vite-node scripts/write-category-seed.ts",
+    "eval": "vite-node scripts/eval.ts"
   },
   "dependencies": {
     "zod": "^3.23.8"

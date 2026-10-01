@@ -66,14 +66,14 @@ export function CaptureCard({ value: text, onChange: setText, onSubmitText, onMi
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} accessibilityLabel="Example phrases">
         {EXAMPLES.map((e) => (
           <Pressable key={e.text} accessibilityRole="button" accessibilityLabel={e.text} onPress={() => { setText(e.text); input.current?.focus(); }}
-            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: MIN_TOUCH - 4, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.8 : 1 })}>
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: MIN_TOUCH, paddingHorizontal: space.lg, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.8 : 1 })}>
             <Icon name={e.icon} size={16} color={colors.accent} />
             <Text variant="callout" weight="medium">{e.text}</Text>
           </Pressable>
         ))}
         {onManual ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Enter details yourself" disabled={disabled} onPress={onManual}
-            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: MIN_TOUCH - 4, paddingHorizontal: space.lg, opacity: disabled ? 0.5 : pressed ? 0.8 : 1 })}>
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: MIN_TOUCH, paddingHorizontal: space.lg, opacity: disabled ? 0.5 : pressed ? 0.8 : 1 })}>
             <Icon name="plus" size={16} color={colors.accent} />
             <Text variant="callout" weight="semibold" tone="accent">Enter manually</Text>
           </Pressable>

@@ -47,3 +47,9 @@ Implemented as one sheet (`VoiceSheet`): getting ready · listening (waveform, l
 App shell and navigation, capture input, voice recorder and waveform, interpretation card with field-level edit, confirmation card, Money Pulse, Safe to Spend, Radar item, transaction row and detail, account and category selectors, budget/goal progress, bottom sheet, toast, skeleton, empty and error states.
 
 Every component ships with loading, empty, error and offline variants where they apply.
+
+
+## Accessibility checks (milestone 12)
+
+Automated and verified in a browser build (`apps/mobile/e2e/`): axe-core WCAG 2.1 A and AA on every main screen in light and dark with no violations; every tappable element at least 44 x 44; no sideways scrolling at 200% zoom; capture, review and save reachable by keyboard alone; capture and save working offline with an honest offline banner. Fixes this produced: toggle chips use `aria-pressed` (not `aria-selected`), the tab bar is a real `tablist`, and many controls grew from 36 to 44.
+Not covered by automation, and still to do on a phone: VoiceOver and TalkBack passes, dynamic type at the largest sizes, and reduce-motion with the real system setting.

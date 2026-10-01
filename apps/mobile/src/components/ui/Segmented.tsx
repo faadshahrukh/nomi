@@ -19,7 +19,7 @@ export function Segmented<T extends string>({ options, value, onChange, accessib
         const on = o.value === value;
         return (
           <Pressable key={o.value} accessibilityRole="radio" aria-checked={on} onPress={() => onChange(o.value)}
-            style={{ flex: 1, minHeight: MIN_TOUCH - 8, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? colors.surface : 'transparent' }}>
+            style={{ flex: 1, minHeight: MIN_TOUCH, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? colors.surface : 'transparent' }}>
             <Text variant="callout" weight={on ? 'semibold' : 'medium'} tone={on ? 'ink' : 'muted'}>{o.label}</Text>
           </Pressable>
         );

@@ -1,6 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { formatMoney, roundToWhole, type Category, type HomeSummary } from '@nomi/core';
-import { space } from '@/design/tokens';
+import { MIN_TOUCH, space } from '@/design/tokens';
 import { Badge, EmptyState, Surface, Text } from '@/components/ui';
 import { monthRangeLabel } from '@/lib/format';
 
@@ -31,7 +31,7 @@ export function WhatChangedCard({ summary, categories, onDriver }: { summary: Ho
           {wc.drivers.map((d) => (
             <Pressable key={d.categoryId ?? 'none'} disabled={!onDriver || !d.categoryId} onPress={() => d.categoryId && onDriver?.(d.categoryId)}
               accessibilityRole={onDriver && d.categoryId ? 'button' : undefined}
-              style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md, minHeight: 40, alignItems: 'center' }}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md, minHeight: MIN_TOUCH, alignItems: 'center' }}
               accessible accessibilityLabel={`${name(d.categoryId)}, ${d.deltaMinor > 0 ? 'up' : 'down'} ${money(d.deltaMinor)} taka, ${d.transactionIds.length} transactions${onDriver && d.categoryId ? '. Opens the transactions.' : ''}`}>
               <Text variant="bodyStrong" style={{ flex: 1 }}>{name(d.categoryId)}</Text>
               <Text variant="bodyStrong" numeric>{d.deltaMinor > 0 ? '+' : '−'}{money(d.deltaMinor)}</Text>

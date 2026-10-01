@@ -21,6 +21,8 @@ export * from './radar';
 export * from './exportData';
 export * from './reminders';
 export * from './sync';
+export * from './eval';
+export * from './analytics';
 export * from './capture';
 export * from './regions';
 export * from './accounts';

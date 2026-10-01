@@ -1,0 +1,63 @@
+const { chromium } = require('playwright');
+(async () => {
+  const b = await chromium.launch({ args: ['--no-sandbox'] });
+  const page = await b.newPage({ viewport: { width: 400, height: 1000 } });
+  const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+  let fails = 0; const ok = (n, c) => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + n); };
+  const vis = async (t) => { for (const l of await page.getByText(t, { exact: false }).all()) if (await l.isVisible().catch(() => false)) return true; return false; };
+  const rows = () => page.getByRole('button', { name: /Opens details/ }).count();
+  const search = page.getByLabel('Search transactions');
+  await page.goto('http://localhost:8099/', { waitUntil: 'networkidle' }); await page.waitForTimeout(800);
+  await page.getByRole('tab', { name: 'Transactions' }).click(); await page.waitForTimeout(500);
+  await page.waitForTimeout(2000);
+  const total = await rows();
+  ok('list shows rows', total > 5);
+  await search.fill('pizza'); await page.waitForTimeout(300);
+  const n = await rows();
+  ok('search by merchant narrows (and says how many)', n > 0 && n < total && await vis(`${n} results`));
+  await search.fill('1,672'); await page.waitForTimeout(300);
+  ok('search by amount with comma finds exactly it', await rows() === 1 && await vis('Pizza Hut'));
+  await search.fill('zzzz'); await page.waitForTimeout(300);
+  ok('no match has its own state with a clear action', await vis('Nothing matches'));
+  await page.getByRole('button', { name: 'Clear all' }).first().click(); await page.waitForTimeout(300);
+  await page.waitForTimeout(2000);
+  ok('clear all restores everything', await rows() === total);
+  // filters
+  await page.getByRole('button', { name: 'Filters' }).click(); await page.waitForTimeout(300);
+  await page.getByRole('button', { name: 'Cash', exact: true }).click();
+  await page.getByRole('button', { name: 'Show results' }).click(); await page.waitForTimeout(300);
+  ok('account filter applies and is flagged on the button', await page.getByRole('button', { name: /Filters, 1 active/ }).isVisible() && await rows() < total && await rows() > 0);
+  await page.getByRole('button', { name: 'Clear all' }).first().click(); await page.waitForTimeout(300);
+  // detail + edit
+  await search.fill('Coffee'); await page.waitForTimeout(300);
+  await page.getByRole('button', { name: /Opens details/ }).first().click(); await page.waitForTimeout(600);
+  ok('detail opens', await vis('Coffee') && await page.getByRole('button', { name: /Amount:/ }).isVisible());
+  ok('no save button until something changes', !(await page.getByRole('button', { name: 'Save changes' }).isVisible().catch(() => false)));
+  await page.getByRole('button', { name: /Amount:/ }).click(); await page.waitForTimeout(300);
+  await page.getByLabel('Amount', { exact: true }).last().fill('250');
+  const apply = page.getByRole('button', { name: /^(Apply|Done|Use|Set|Save)/ }).first(); await apply.click(); await page.waitForTimeout(300);
+  ok('edited amount shows and Save changes appears', await page.getByRole('button', { name: 'Save changes' }).isVisible() && await vis('৳250'));
+  await page.getByRole('button', { name: 'Discard changes' }).click(); await page.waitForTimeout(300);
+  ok('discard returns to the original', await vis('৳190') && !(await page.getByRole('button', { name: 'Save changes' }).isVisible().catch(() => false)));
+  await page.getByRole('button', { name: /Amount:/ }).click(); await page.waitForTimeout(300);
+  await page.getByLabel('Amount', { exact: true }).last().fill('250');
+  await page.getByRole('button', { name: /^(Apply|Done|Use|Set|Save)/ }).first().click(); await page.waitForTimeout(300);
+  await page.getByRole('button', { name: 'Save changes' }).click(); await page.waitForTimeout(700);
+  ok('saved', await vis('Changes saved') && await vis('edited'));
+  // delete + undo
+  await page.getByRole('button', { name: 'Delete transaction' }).click();
+  ok('delete asks first', await vis('Delete this transaction?'));
+  await page.getByRole('button', { name: 'Delete', exact: true }).click(); await page.waitForTimeout(800);
+  ok('after delete, back on the list with Undo', await vis('Undo') && page.url().endsWith('/transactions'));
+  await search.fill('Coffee'); await page.waitForTimeout(300);
+  const gone = await rows();
+  await page.getByRole('button', { name: 'Undo' }).click().catch(() => {}); await page.waitForTimeout(800);
+  await page.getByLabel('Search transactions').fill('Coffee'); await page.waitForTimeout(300);
+  ok('undo brings it back', (await rows()) === gone + 1);
+  // balances reflect the edit: home recent still renders and links to detail
+  await page.getByRole('tab', { name: 'Home' }).click(); await page.waitForTimeout(500);
+  await page.getByRole('button', { name: /Opens details/ }).first().click(); await page.waitForTimeout(500);
+  ok('home recent rows open detail', await page.getByRole('button', { name: /Amount:/ }).isVisible());
+  ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
+  await b.close(); process.exit(fails ? 1 : 0);
+})();

@@ -117,7 +117,7 @@ export function AuthPanel({ initialMode = 'signUp', onSignedIn, onSkip }: { init
       {mode !== 'reset' ? (
         <View style={{ gap: space.xs }}>
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry={!show} autoCapitalize="none" autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'} textContentType={mode === 'signUp' ? 'newPassword' : 'password'} returnKeyType="go" onSubmitEditing={submit} placeholder={mode === 'signUp' ? 'At least 8 characters' : 'Your password'} />
-          <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide password' : 'Show password'} onPress={() => setShow((s) => !s)} style={{ alignSelf: 'flex-start', minHeight: MIN_TOUCH - 8, justifyContent: 'center' }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide password' : 'Show password'} onPress={() => setShow((s) => !s)} style={{ alignSelf: 'flex-start', minHeight: MIN_TOUCH, justifyContent: 'center' }}>
             <Text variant="caption" weight="semibold" tone="accent">{show ? 'Hide password' : 'Show password'}</Text>
           </Pressable>
           {pwBad && pwProblem ? <Text variant="caption" tone="negative" accessibilityRole="alert">{mode === 'signUp' ? PASSWORD_MESSAGES[pwProblem] : 'Enter your password.'}</Text> : null}

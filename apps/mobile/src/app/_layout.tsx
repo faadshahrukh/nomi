@@ -16,6 +16,7 @@ import { NetworkProvider } from '@/providers/NetworkProvider';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { LedgerProvider, useLedger } from '@/data/LedgerProvider';
 import { SyncProvider } from '@/sync/SyncProvider';
+import { AnalyticsProvider } from '@/analytics/AnalyticsProvider';
 import { useReminderScheduler } from '@/notifications/useReminderScheduler';
 import { ToastProvider } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -71,7 +72,9 @@ export default function RootLayout() {
           <AuthProvider>
             <LedgerProvider>
               <SyncProvider>
-                <Frame />
+                <AnalyticsProvider>
+                  <Frame />
+                </AnalyticsProvider>
               </SyncProvider>
             </LedgerProvider>
           </AuthProvider>

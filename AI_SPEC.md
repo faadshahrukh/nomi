@@ -133,3 +133,12 @@ When the user changes a category for a merchant, store `(merchant_key → catego
 ## Evaluation (planned)
 
 A labelled set covering: simple and multiple expenses, Bangla, English, mixed Bangla-English, relative dates, merchants, shared expenses, transfers, income, refunds, ambiguous amounts, speech errors and corrections. Metrics: field accuracy, category accuracy, false-assumption rate, clarification rate, save success. Today's tests in `packages/core/test/ai.test.ts` cover the validation and policy half with hand-written model outputs.
+
+
+## Evaluation set (milestone 12)
+
+`packages/core/src/eval/cases.ts` holds 71 labelled messages (English, Bangla, mixed, relative dates, merchants, accounts, shared costs, transfers, income, refunds, loans, multiple items, ambiguity, voice/speech, and things that are not transactions, including prompt-injection attempts), each with the right answer. `runEval` scores status, clarification, and every listed field, and checks safety rules that are promises, not accuracy goals: voice always needs a confirmation tap, no amount is invented, an ambiguous message is never accepted, a transfer never assumes its source, and no amount appears that the text does not contain.
+
+- **Gate (runs in `npm test`):** the on-device interpreter must break no safety rule and pass at least 98% of the cases it should handle. Known gaps are listed with a reason and are excluded from the rate; a known gap that starts passing fails the test until it is un-listed, so the list cannot go stale. Current baseline: 63 of 71 overall (88.7%), field accuracy 96.0%, 0 safety violations; the 8 gaps are things the rules cannot do (weekday names, goal contributions, Bangla payments to a person, income categories other than salary, a gift read as income, "lakh" with an unknown category word, an unknown word like "haircut", and an instruction read as an amount to ask about).
+- **Against the real model:** `ANTHROPIC_API_KEY=... npm run eval -w @nomi/core` runs the same set through the production interpreter, prompt and schema and prints a report by kind of input. It has not been run, because it needs a key; run it before changing the prompt or model and keep the report.
+- Add a case whenever a real message goes wrong.

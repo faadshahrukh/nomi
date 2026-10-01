@@ -19,7 +19,7 @@ export function TabBarContainer({ children, style, ...rest }: ViewProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <View {...rest} style={[{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: insets.bottom, paddingHorizontal: space.xs }, style]}>
+    <View {...rest} accessibilityRole="tablist" accessibilityLabel="Main navigation" style={[{ flexDirection: 'row', backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: insets.bottom, paddingHorizontal: space.xs }, style]}>
       {children}
     </View>
   );

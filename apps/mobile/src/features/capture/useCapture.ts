@@ -5,6 +5,7 @@ import {
 } from '@nomi/core';
 import { buildInterpreter } from '@/ai/buildInterpreter';
 import { useAuth } from '@/auth/AuthProvider';
+import { useAnalytics } from '@/analytics/AnalyticsProvider';
 import { config } from '@/config';
 import { appNow } from '@/data/clock';
 import { useLedger } from '@/data/LedgerProvider';
@@ -24,6 +25,7 @@ export function useCapture() {
   const { state: ledger, mode, commit, undo: undoCommit } = useLedger();
   const [state, dispatch] = useReducer(captureReducer, initialCapture);
   const auth = useAuth();
+  const { track } = useAnalytics();
   const aiAllowed = ledger.status === 'ready' ? ledger.snapshot.profile.aiProcessing : true;
   // The AI service is used only for signed-in users who allow it; otherwise the message never leaves the device.
   const interpreter = useMemo(() => buildInterpreter({
@@ -67,10 +69,12 @@ export function useCapture() {
     batch.current = { entries: [], safeBefore: null };
     dispatch({ type: 'submit', text, source });
     const outcome = await captureText({ text, source, snapshot, interpreter, now: appNow() });
+    track('capture_submitted', { source, interpreter: outcome.interpretedBy ?? 'device' });
+    track('capture_outcome', { outcome: outcome.status, source });
     const only = outcome.status === 'ready' && outcome.proposals.length === 1 ? outcome.proposals[0]! : null;
     if (only && only.decision === 'auto_save' && only.draft && await persist('p0', only.editable, false, true)) return; // user opted in to auto-save: saved, with Undo
     dispatch({ type: 'outcome', text, source, outcome });
-  }, [snapshot, interpreter, persist]);
+  }, [snapshot, interpreter, persist, track]);
 
   const startManual = useCallback(() => {
     if (!snapshot) return;

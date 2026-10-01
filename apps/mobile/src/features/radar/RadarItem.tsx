@@ -26,8 +26,8 @@ export function RadarItem({ signal, onOpen, onDismiss }: { signal: RadarSignal; 
           <Text variant="callout" tone="muted">{signal.detail}</Text>
         </View>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Dismiss: ${signal.title}`} onPress={onDismiss} hitSlop={8}
-        style={({ pressed }) => ({ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Dismiss: ${signal.title}`} onPress={onDismiss} 
+        style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
         <Icon name="close" size={18} color={colors.inkMuted} />
       </Pressable>
     </Surface>

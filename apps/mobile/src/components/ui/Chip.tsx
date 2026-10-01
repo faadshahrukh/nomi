@@ -7,9 +7,9 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
   const { colors } = useTheme();
   return (
     <Pressable
-      accessibilityRole="button" aria-selected={!!selected} onPress={onPress}
+      accessibilityRole="button" aria-pressed={!!selected} onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: MIN_TOUCH - 8, paddingHorizontal: space.lg, borderRadius: radius.pill, justifyContent: 'center',
+        minHeight: MIN_TOUCH, paddingHorizontal: space.lg, borderRadius: radius.pill, justifyContent: 'center',
         backgroundColor: selected ? colors.ink : colors.surface, borderWidth: 1, borderColor: selected ? colors.ink : colors.border, opacity: pressed ? 0.8 : 1,
       })}
     >

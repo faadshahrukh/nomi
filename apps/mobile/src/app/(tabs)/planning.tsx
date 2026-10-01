@@ -85,7 +85,7 @@ export default function Planning() {
                 return (
                   <View key={r.id} style={{ minHeight: 64, paddingVertical: space.sm, gap: space.xs }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-                      <Pressable style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" accessibilityLabel={`${r.name}, ${FREQ[r.frequency]}, ${label}. Tap to edit.`} onPress={() => setRecurring({ open: true, editing: r })}>
+                      <Pressable style={{ flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={`${r.name}, ${FREQ[r.frequency]}, ${label}. Tap to edit.`} onPress={() => setRecurring({ open: true, editing: r })}>
                         <Text variant="bodyStrong" numberOfLines={1}>{r.name}</Text>
                         <Text variant="caption" tone="muted">{FREQ[r.frequency]} · {label}</Text>
                       </Pressable>

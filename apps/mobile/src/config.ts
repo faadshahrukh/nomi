@@ -11,6 +11,8 @@ export const config = {
   supabaseAnonKey: anonKey,
   /** True only when the project URL and key are both present. Without them the app is local-only. */
   backendConfigured: /^https?:\/\//.test(url) && anonKey.length > 20,
+  /** Where opted-in anonymous usage counts go (the owner's own endpoint). Empty means usage is not collected at all. */
+  analyticsUrl: /^https:\/\//.test(process.env.EXPO_PUBLIC_ANALYTICS_URL ?? '') ? (process.env.EXPO_PUBLIC_ANALYTICS_URL as string) : '',
   interpretUrl: url ? `${url}/functions/v1/interpret` : '',
   /** Deep link the OAuth and email-confirmation flows return to. Must match supabase/config.toml and app.json "scheme". */
   authRedirect: 'nomi://auth/callback',

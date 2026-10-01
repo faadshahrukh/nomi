@@ -5,12 +5,14 @@ import { config } from '@/config';
 import { space } from '@/design/tokens';
 import { useAuth } from '@/auth/AuthProvider';
 import { useLedger } from '@/data/LedgerProvider';
+import { useAnalytics } from '@/analytics/AnalyticsProvider';
 import { shareTextFile } from '@/lib/shareFile';
 import { Button, ErrorState, Screen, ScreenTitle, Segmented, SkeletonLines, Surface, Text, useToast } from '@/components/ui';
 
 /** Your data, in your hands: what is kept, a full export, and real deletion. Each destructive step asks twice and says exactly what it removes. */
 export default function PrivacyScreen() {
   const router = useRouter();
+  const analytics = useAnalytics();
   const toast = useToast();
   const auth = useAuth();
   const { state, mode, retry, updateProfile, exportAll, deleteLocalData } = useLedger();
@@ -29,6 +31,7 @@ export default function PrivacyScreen() {
     try {
       const out = await exportAll();
       const r = kind === 'json' ? await shareTextFile(out.jsonName, out.json, 'application/json') : await shareTextFile(out.csvName, out.csv, 'text/csv');
+      if (r === 'shared') analytics.track('export_used', { format: kind });
       toast.show(r === 'shared' ? { message: 'Your export is ready.', tone: 'success' } : { message: "Couldn't open the share sheet on this device.", tone: 'error' });
     } catch { toast.show({ message: "Couldn't create the export. Nothing was changed.", tone: 'error' }); } finally { setBusy(null); }
   }
@@ -64,6 +67,17 @@ export default function PrivacyScreen() {
         <Segmented<'on' | 'off'> accessibilityLabel="Keep what I type or say" value={profile.retainRawInput ? 'on' : 'off'} onChange={(v) => { void updateProfile({ retainRawInput: v === 'on' }); }}
           options={[{ value: 'off', label: 'Off (recommended)' }, { value: 'on', label: 'On' }]} />
         <Text variant="callout" tone="muted">{profile.retainRawInput ? 'The original sentence is kept with each transaction you add from now on, so you can see what you said. Existing ones are unchanged.' : 'Only the details you confirmed are kept. The sentence itself is thrown away once understood.'}</Text>
+      </Surface>
+
+      <Surface padding="lg" rounded="lg" style={{ gap: space.md }}>
+        <Text variant="bodyStrong">Anonymous usage counts</Text>
+        {analytics.available ? (
+          <>
+            <Segmented<'on' | 'off'> accessibilityLabel="Anonymous usage counts" value={analytics.enabled ? 'on' : 'off'} onChange={(v) => { void analytics.setEnabled(v === 'on'); }}
+              options={[{ value: 'off', label: 'Off (default)' }, { value: 'on', label: 'On' }]} />
+            <Text variant="callout" tone="muted">Helps improve Nomi by counting things like "a voice entry was saved". It can never include amounts, names, merchants, notes, accounts or anything you typed or said, and it is not linked to you.</Text>
+          </>
+        ) : <Text variant="callout" tone="muted">This version does not collect any usage statistics.</Text>}
       </Surface>
 
       <Surface padding="lg" rounded="lg" style={{ gap: space.md }}>

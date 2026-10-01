@@ -56,7 +56,7 @@ export default function Transactions() {
           <Icon name="search" size={18} color={colors.inkMuted} />
           <TextInput value={text} onChangeText={setText} accessibilityLabel="Search transactions" placeholder="Search name, note, account or amount" placeholderTextColor={colors.inkMuted} returnKeyType="search" autoCorrect={false}
             style={{ flex: 1, minHeight: 44, color: colors.ink, fontFamily: fontFamily.medium, fontSize: 16 }} />
-          {text ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setText('')} hitSlop={12}><Icon name="close" size={18} color={colors.inkMuted} /></Pressable> : null}
+          {text ? <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setText('')} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={18} color={colors.inkMuted} /></Pressable> : null}
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={nFilters ? `Filters, ${nFilters} active` : 'Filters'} onPress={() => setSheet(true)}
           style={{ width: 52, height: 52, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: nFilters ? colors.accent : colors.surface, borderWidth: 1, borderColor: nFilters ? colors.accent : colors.border }}>
