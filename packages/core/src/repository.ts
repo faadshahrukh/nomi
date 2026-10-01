@@ -23,6 +23,9 @@ export interface LedgerRepository {
   putBudget(userId: Id, budget: Budget): Promise<void>;
   /** Budgets are plans, not ledger entries, so removing one is a real delete. A missing id is not an error. */
   deleteBudget(userId: Id, id: Id): Promise<void>;
+  /** Radar signals the user has dismissed. Keys are period- or item-scoped, so a dismissal never hides a different problem. */
+  listDismissedSignals(userId: Id): Promise<string[]>;
+  dismissSignal(userId: Id, key: string, at: string): Promise<void>;
   listRecurringRules(userId: Id): Promise<RecurringRule[]>;
   putRecurringRule(userId: Id, rule: RecurringRule): Promise<void>;
   listGoals(userId: Id): Promise<Goal[]>;
@@ -65,6 +68,9 @@ export class InMemoryLedgerRepository implements LedgerRepository {
   async listBudgets(userId: Id) { return this.budgets.filter((b) => b.userId === userId).map((b) => ({ ...b })); }
   async putBudget(userId: Id, b: Budget) { own(userId, b); upsert(this.budgets, b); }
   async deleteBudget(userId: Id, id: Id) { this.budgets = this.budgets.filter((b) => !(b.userId === userId && b.id === id)); }
+  dismissed: Array<{ userId: Id; key: string; at: string }> = [];
+  async listDismissedSignals(userId: Id) { return this.dismissed.filter((d) => d.userId === userId).map((d) => d.key); }
+  async dismissSignal(userId: Id, key: string, at: string) { if (!this.dismissed.some((d) => d.userId === userId && d.key === key)) this.dismissed.push({ userId, key, at }); }
   async listRecurringRules(userId: Id) { return this.recurringRules.filter((r) => r.userId === userId).map((r) => ({ ...r })); }
   async putRecurringRule(userId: Id, r: RecurringRule) { own(userId, r); upsert(this.recurringRules, r); }
   async listGoals(userId: Id) { return this.goals.filter((g) => g.userId === userId).map((g) => ({ ...g })); }

@@ -88,6 +88,9 @@ export class SqlLedgerRepository implements LedgerRepository {
 
   async deleteBudget(userId: Id, id: Id) { await this.db.run('DELETE FROM budgets WHERE user_id = ? AND id = ?', [userId, id]); }
 
+  async listDismissedSignals(userId: Id): Promise<string[]> { return (await this.db.all<Row>('SELECT key FROM dismissed_signals WHERE user_id = ?', [userId])).map((r) => s(r.key!)); }
+  async dismissSignal(userId: Id, key: string, at: string) { await this.db.run('INSERT OR IGNORE INTO dismissed_signals (user_id, key, at) VALUES (?,?,?)', [userId, key, at]); }
+
   async listRecurringRules(userId: Id): Promise<RecurringRule[]> {
     return (await this.db.all<Row>('SELECT * FROM recurring_rules WHERE user_id = ?', [userId])).map((r) => ({
       id: s(r.id!), userId: s(r.user_id!), name: s(r.name!), type: s(r.type!) as RecurringRule['type'], amountMinor: n(r.amount_minor!), currency: s(r.currency!),

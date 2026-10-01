@@ -42,8 +42,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 7 | Voice capture: permission, listening, finishing, editable transcript, and every failure with a typed way forward | **Done**. Verified in a browser build with a scripted recogniser. Real iOS/Android speech (including Bangla quality) is untested and needs a development build, not Expo Go |
 | 8 | Transactions list: search (words and exact amounts), type tabs, period/account/category filters, detail screen, field-level edit, delete with Undo, duplicate warning on edit | **Done**. Verified end to end in a browser build. Core search/edit/restore logic is unit-tested (228 core tests) |
 | 9 | Budgets (add, edit, remove per category or overall), Money Pulse and Safe to Spend detail screens with the itemised calculation and an editable safety buffer, What Changed drivers that open the matching transactions | **Done**. Verified end to end in a browser build. Validation and delete are unit-tested (234 core tests) |
-| 10 (next) | Recurring and Upcoming, Financial Radar V1 (deterministic signals, de-duplicated, capped) | |
-| 11 | Offline sync queue and conflict handling, notifications, privacy controls, export and delete | |
+| 10 | Recurring bills and income (add, edit, pause/resume, mark paid, overdue), Upcoming links, Financial Radar V1: eight deterministic signal kinds, de-duplicated, capped at 5, 2 on Home, dismissible per month or item | **Done**. Verified end to end in a browser build. Radar and recurring logic are unit-tested (250 core tests) |
+| 11 (next) | Offline sync queue and conflict handling, notifications, privacy controls, export and delete | |
 | 12 | Accessibility and offline/error QA, analytics (no financial content), AI evaluation set | |
 
 ## Definition of done per feature
@@ -52,7 +52,7 @@ UI, data model, business logic, persistence, loading/error/empty/offline states,
 
 ## Milestone 3 notes
 
-- Home shows the spec's order with one change: the slot named Financial Radar shows **What changed** (real, deterministic). Radar signals themselves are milestone 10.
+- Home shows the spec's order with one change: the slot named Financial Radar shows **What changed** (real, deterministic). Radar signals (milestone 10) now fill that slot on Home, and What changed lives in Insights.
 - Budget projection was fixed during this milestone: fixed bills paid early in the month are no longer extrapolated as a daily rate, and unpaid bills due later are added.
 - What Changed now waits until day 7 of the month so a few days of spending is not called a trend.
 - Known gaps: the Android and iOS builds of the SQLite adapter are untested on a device; web has no durable store; Home refreshes only on load (no foreground refresh yet); there is no way to add data yet, so a real ledger is empty until milestones 4 and 6.
@@ -77,4 +77,4 @@ The product owner's Home design was applied: new palette and tokens, gradient su
 
 ## Not implemented yet, so do not assume it works
 
-Deployed backend, live AI, sync, notifications, Radar signals, creating goals and recurring rules, export and deletion screens, app lock.
+Deployed backend, live AI, sync, notifications, creating goals, export and deletion screens, app lock.

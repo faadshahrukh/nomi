@@ -7,7 +7,7 @@ export type IssueCode =
   | 'amount_invalid' | 'currency_mismatch' | 'account_required' | 'account_not_found' | 'account_archived'
   | 'to_account_required' | 'transfer_same_account' | 'category_not_found' | 'category_kind_mismatch'
   | 'splits_required' | 'splits_sum_mismatch' | 'splits_invalid' | 'party_not_found'
-  | 'counterparty_required' | 'direction_required' | 'goal_required' | 'date_invalid';
+  | 'counterparty_required' | 'direction_required' | 'goal_required' | 'date_invalid' | 'occurrence_already_recorded';
 
 export interface Issue { code: IssueCode; field: string; message: string }
 
@@ -132,6 +132,10 @@ export function validateTransaction(tx: Transaction, data: LedgerData): Issue[] 
 
   if (!Number.isSafeInteger(tx.amountMinor) || tx.amountMinor <= 0) bad('amount_invalid', 'amount', 'Amount must be a positive whole number of minor units.');
   if (!isValidLocalDate(tx.localDate)) bad('date_invalid', 'date', 'Date is not a valid calendar date.');
+
+  if (tx.recurringRuleId && tx.occurrenceDate && data.transactions.some((t) => !t.deletedAt && t.id !== tx.id && t.recurringRuleId === tx.recurringRuleId && t.occurrenceDate === tx.occurrenceDate)) {
+    bad('occurrence_already_recorded', 'occurrence', 'That payment has already been recorded.');
+  }
 
   const needsOwnAccount = !(tx.type === 'expense' && tx.paidBy !== 'me');
   const from = acct(tx.accountId);

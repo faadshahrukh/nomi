@@ -18,7 +18,8 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 | Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (search, filters, detail, edit, delete), budgets, Money Pulse and Safe to Spend details, Planning (read-only) and Insights (What changed) reading real stored data. Text capture, first-run onboarding, accounts and sign-in screens work. Voice capture is built (needs a development build on a phone). Transactions can be searched, filtered, edited and deleted (with Undo) |
 | Backend (Supabase), auth, sync | Not started |
 | Voice capture | Not started |
-| Financial Radar, Insights, Money Circle UI, Ask Money | Not started |
+| Financial Radar V1 (Home and `/radar`), Insights (What changed) | **Built**, rule-based, no AI |
+| Money Circle UI, Ask Money | Not started |
 
 See `DEVELOPMENT_PLAN.md` for the order of work and `ARCHITECTURE.md` for how the pieces fit.
 

@@ -1,13 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { ACCOUNT_ISSUE_MESSAGES, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
 type State =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; snapshot: LedgerSnapshot; summary: HomeSummary; /** A fresh real ledger that has not finished setup. Never true for demo data. */ needsOnboarding: boolean };
+  | { status: 'ready'; snapshot: LedgerSnapshot; summary: HomeSummary; /** Things worth attention right now: de-duplicated, capped, minus what the user dismissed. */ radar: RadarSignal[]; /** A fresh real ledger that has not finished setup. Never true for demo data. */ needsOnboarding: boolean };
 
 interface LedgerValue {
   state: State;
@@ -30,6 +30,14 @@ interface LedgerValue {
   /** Creates or replaces the budget for a category (null = overall). Bad input comes back as messages, not an exception. */
   saveBudget: (input: BudgetInput) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
   deleteBudget: (id: string) => Promise<void>;
+  /** Creates a recurring bill or income, or changes one (pass its id). Bad input comes back as messages. */
+  saveRecurring: (input: RecurringInput, editingId?: string | null) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
+  /** Pauses or resumes a recurring rule. Paused rules never come due; nothing already recorded changes. */
+  setRecurringActive: (id: string, active: boolean) => Promise<void>;
+  /** Records the payment for one due date of a rule, dated today and linked to that occurrence. */
+  markPaid: (ruleId: string, occurrenceDate: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Hides a Radar signal. It stays hidden for that month or item only. */
+  dismissSignal: (key: string) => Promise<void>;
   /** Sets how much Safe to Spend keeps untouched. Empty or 0 means no buffer. */
   setSafetyBuffer: (text: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Sets (or replaces) the overall monthly budget. */
@@ -51,15 +59,15 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
     try {
       const repo = await openRepository(m);
       const userId = userIdFor(m);
-      const [stored, accounts, categories, people, transactions, budgets, recurringRules, goals] = await Promise.all([
+      const [stored, accounts, categories, people, transactions, budgets, recurringRules, goals, dismissed] = await Promise.all([
         repo.getProfile(userId), repo.listAccounts(userId), repo.listCategories(userId), repo.listPeople(userId), repo.listTransactions(userId),
-        repo.listBudgets(userId), repo.listRecurringRules(userId), repo.listGoals(userId),
+        repo.listBudgets(userId), repo.listRecurringRules(userId), repo.listGoals(userId), repo.listDismissedSignals(userId),
       ]);
       const profile = stored;
       const snapshot: LedgerSnapshot = { profile: profile ?? fallbackProfile(userId), accounts, categories, people, transactions, budgets, recurringRules, goals };
       const today = todayIn(snapshot.profile.timezone, appNow());
       const summary = buildHomeSummary(snapshot, today);
-      setState({ status: 'ready', snapshot, summary, needsOnboarding: m === 'real' && (!stored || !stored.onboardedAt) });
+      setState({ status: 'ready', snapshot, summary, radar: buildRadar(snapshot, summary, today, dismissed), needsOnboarding: m === 'real' && (!stored || !stored.onboardedAt) });
       return summary;
     } catch {
       // Deliberately no error details: storage errors can contain SQL with financial values.
@@ -120,6 +128,40 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       if (!profile.defaultAccountId) await repo.putProfile(userIdFor(mode), { ...profile, defaultAccountId: account.id, userId: userIdFor(mode) });
       await load(mode, true);
       return { ok: true, account };
+    },
+    saveRecurring: async (input, editingId) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const { profile, accounts, categories, recurringRules } = state.snapshot;
+      const { issues, amountMinor } = validateRecurringInput(input, accounts, categories, profile.currency);
+      if (issues.length || amountMinor === null) return { ok: false, messages: issues.map((i) => RECURRING_ISSUE_MESSAGES[i]) };
+      const repo = await openRepository(mode);
+      const existing = editingId ? recurringRules.find((r) => r.id === editingId) ?? null : null;
+      await repo.putRecurringRule(userIdFor(mode), buildRecurringRule(userIdFor(mode), Crypto.randomUUID(), input, amountMinor, profile.currency, existing));
+      await load(mode, true);
+      return { ok: true };
+    },
+    setRecurringActive: async (id, active) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const rule = state.snapshot.recurringRules.find((r) => r.id === id);
+      if (!rule) return;
+      await (await openRepository(mode)).putRecurringRule(userIdFor(mode), { ...rule, active });
+      await load(mode, true);
+    },
+    markPaid: async (ruleId, occurrenceDate) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const rule = state.snapshot.recurringRules.find((r) => r.id === ruleId);
+      if (!rule) return { ok: false, message: 'That bill is no longer there.' };
+      const profile = state.snapshot.profile;
+      const service = new TransactionService(await openRepository(mode), { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone });
+      try { await service.create(userIdFor(mode), payOccurrence(rule, occurrenceDate, state.summary.today)); } catch (e) {
+        return { ok: false, message: e instanceof ValidationError && e.issues.some((i) => i.code === 'occurrence_already_recorded') ? 'That one is already recorded.' : "Couldn't record the payment. Nothing was changed." };
+      }
+      await load(mode, true);
+      return { ok: true };
+    },
+    dismissSignal: async (key) => {
+      await (await openRepository(mode)).dismissSignal(userIdFor(mode), key, appNow().toISOString());
+      await load(mode, true);
     },
     saveBudget: async (input) => {
       if (state.status !== 'ready') throw new Error('Ledger is not ready');

@@ -1,21 +1,28 @@
-import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
-import type { Budget } from '@nomi/core';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { addDays, nextDue, overdueOccurrences, type Budget, type RecurringRule } from '@nomi/core';
 import { formatMoney } from '@nomi/core';
 import { BudgetSheet } from '@/features/planning/BudgetSheet';
+import { RecurringSheet } from '@/features/recurring/RecurringSheet';
 import { space } from '@/design/tokens';
 import { useLedger } from '@/data/LedgerProvider';
 import { BudgetRow } from '@/features/planning/BudgetRow';
 import { shortDate } from '@/lib/format';
-import { Button, Chip, EmptyState, ErrorState, Money, ProgressBar, Screen, ScreenTitle, SkeletonLines, Surface, Text } from '@/components/ui';
+import { Badge, Button, Chip, EmptyState, ErrorState, Money, ProgressBar, Screen, ScreenTitle, SkeletonLines, Surface, Text, useToast } from '@/components/ui';
 
 type Section = 'Budgets' | 'Goals' | 'Recurring';
 const FREQ = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' } as const;
 
-/** Budgets can be added, changed and removed here. Goals and recurring payments are read-only until milestone 10. */
+/** Budgets and recurring payments can be added, changed and paused here. Goals are read-only for now. */
 export default function Planning() {
   const { state, retry } = useLedger();
+  const toast = useToast();
+  const { markPaid } = useLedger();
+  const params = useLocalSearchParams<{ section?: string }>();
   const [section, setSection] = useState<Section>('Budgets');
+  useEffect(() => { if (params.section === 'Recurring' || params.section === 'Budgets' || params.section === 'Goals') setSection(params.section); }, [params.section]);
+  const [recurring, setRecurring] = useState<{ open: boolean; editing: RecurringRule | null }>({ open: false, editing: null });
   const [sheet, setSheet] = useState<{ open: boolean; editing: Budget | null }>({ open: false, editing: null });
   const ready = state.status === 'ready' ? state : null;
   const c = ready?.summary.currency ?? 'BDT';
@@ -51,17 +58,44 @@ export default function Planning() {
             </Surface>))}</View>
         : <EmptyState icon="planning" title="No goals yet" message="Add a savings goal and Nomi will keep it in mind when estimating what you can spend." />) : null}
 
-      {ready && section === 'Recurring' ? (ready.summary.recurring.length
-        ? <Surface padding="sm"><View style={{ paddingHorizontal: space.md }}>{ready.summary.recurring.map((r) => (
-            <View key={r.rule.id} style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 60 }} accessible
-              accessibilityLabel={`${r.rule.name}, ${FREQ[r.rule.frequency]}, next ${r.nextDate ? shortDate(r.nextDate, ready.summary.today) : 'none'}`}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text variant="bodyStrong" numberOfLines={1}>{r.rule.name}</Text>
-                <Text variant="caption" tone="muted">{FREQ[r.rule.frequency]}{r.nextDate ? ` · next ${shortDate(r.nextDate, ready.summary.today)}` : ''}</Text>
-              </View>
-              <Money minor={r.rule.amountMinor} currency={c} size="small" />
-            </View>))}</View></Surface>
-        : <EmptyState icon="planning" title="No recurring payments" message="Bills and subscriptions you add will be tracked here." />) : null}
+      {ready && section === 'Recurring' ? (() => {
+        const today = ready.summary.today, txs = ready.snapshot.transactions;
+        const overdue = overdueOccurrences(ready.snapshot.recurringRules, txs, today);
+        const pay = async (ruleId: string, date: string) => {
+          const r = await markPaid(ruleId, date).catch(() => ({ ok: false as const, message: "Couldn't record the payment." }));
+          toast.show(r.ok ? { message: 'Recorded as paid.', tone: 'success' } : { message: r.message, tone: 'error' });
+        };
+        const rules = ready.snapshot.recurringRules;
+        return (
+          <View style={{ gap: space.md }}>
+            {rules.length ? (
+              <Surface padding="sm"><View style={{ paddingHorizontal: space.md }}>{rules.map((r) => {
+                const od = overdue.find((o) => o.rule.id === r.id);
+                const due = od?.date ?? nextDue(r, txs, today);
+                const label = !r.active ? 'Paused' : od ? `Overdue since ${shortDate(od.date, today)}` : due ? `Next ${shortDate(due, today)}` : 'Nothing due';
+                return (
+                  <View key={r.id} style={{ minHeight: 64, paddingVertical: space.sm, gap: space.xs }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                      <Pressable style={{ flex: 1, minWidth: 0 }} accessibilityRole="button" accessibilityLabel={`${r.name}, ${FREQ[r.frequency]}, ${label}. Tap to edit.`} onPress={() => setRecurring({ open: true, editing: r })}>
+                        <Text variant="bodyStrong" numberOfLines={1}>{r.name}</Text>
+                        <Text variant="caption" tone="muted">{FREQ[r.frequency]} · {label}</Text>
+                      </Pressable>
+                      {od ? <Badge label="Overdue" tone="caution" icon="alert" /> : null}
+                      <Money minor={r.amountMinor} currency={c} size="small" tone={r.type === 'income' ? 'positive' : 'ink'} />
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: space.sm }}>
+                      {r.active && due && r.type === 'expense' && (od || due <= addDays(today, 7)) ? <Button label="Mark paid" accessibilityLabel={`Mark ${r.name} paid`} variant="secondary" onPress={() => void pay(r.id, due)} /> : null}
+                      <Button label="Edit" accessibilityLabel={`Edit ${r.name}`} variant="ghost" onPress={() => setRecurring({ open: true, editing: r })} />
+                    </View>
+                  </View>
+                );
+              })}</View></Surface>
+            ) : <EmptyState icon="planning" title="No recurring payments" message="Add bills and subscriptions. Nomi counts the unpaid ones in Safe to Spend and tells you before they are due." />}
+            <Button label="Add recurring" icon="plus" variant={rules.length ? 'secondary' : 'primary'} onPress={() => setRecurring({ open: true, editing: null })} />
+            <RecurringSheet visible={recurring.open} editing={recurring.editing} today={today} onClose={() => setRecurring({ open: false, editing: null })} />
+          </View>
+        );
+      })() : null}
     </Screen>
   );
 }

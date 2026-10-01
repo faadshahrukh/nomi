@@ -12,7 +12,8 @@ import { MoneyPulseCard } from '@/features/home/MoneyPulseCard';
 import { RecentActivity } from '@/features/home/RecentActivity';
 import { SafeToSpendCard } from '@/features/home/SafeToSpendCard';
 import { SectionTitle } from '@/features/home/SectionTitle';
-import { SignalCard } from '@/features/home/SignalCard';
+import { RadarCard } from '@/features/home/RadarCard';
+import { openTarget } from '@/features/radar/openTarget';
 import { UpcomingCard } from '@/features/home/UpcomingCard';
 import { EmptyState, ErrorState, Screen, Surface, useToast } from '@/components/ui';
 
@@ -24,7 +25,7 @@ import { EmptyState, ErrorState, Screen, Surface, useToast } from '@/components/
 export default function HomeScreen() {
   const toast = useToast();
   const router = useRouter();
-  const { state, mode, retry } = useLedger();
+  const { state, mode, retry, dismissSignal } = useLedger();
   const [addingAccount, setAddingAccount] = useState(false);
   const ready = state.status === 'ready' ? state : null;
 
@@ -49,10 +50,11 @@ export default function HomeScreen() {
           <View style={{ gap: space.lg }}>
             <MoneyPulseCard summary={ready.summary} onDetails={() => router.push('/money-pulse')} />
             <SafeToSpendCard summary={ready.summary} onDetails={() => router.push('/safe-to-spend')} />
-            <SignalCard summary={ready.summary} categories={ready.snapshot.categories} onDetails={() => router.push('/insights')} />
+            <RadarCard signals={ready.radar} onOpen={(s) => openTarget(router, s.target)} onSeeAll={() => router.push('/radar')}
+              onDismiss={(s) => { dismissSignal(s.key).catch(() => toast.show({ message: "Couldn't dismiss that.", tone: 'error' })); }} />
           </View>
           <View style={{ gap: space.sm }}>
-            <SectionTitle icon="planning" title="Upcoming" onAction={() => router.push('/planning')} />
+            <SectionTitle icon="planning" title="Upcoming" onAction={() => router.push('/planning?section=Recurring')} />
             <UpcomingCard summary={ready.summary} accounts={ready.snapshot.accounts} />
           </View>
           <View style={{ gap: space.sm }}>

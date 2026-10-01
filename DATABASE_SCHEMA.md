@@ -14,7 +14,7 @@ The TypeScript types in `packages/core/src/types.ts` are the model. **Migration 
 | `goals` | `name`, `target_minor`, `target_date`, `monthly_contribution_minor`, `opening_saved_minor` | Saved amount = opening + goal contributions. |
 | `audit_log` | `entity`, `entity_id`, `action`, `at`, `changed_fields`, `before jsonb`, `after jsonb` | Append-only. |
 | `category_corrections` | `merchant_key`, `category_id`, `count`, `last_at` | Learning from user corrections (planned). |
-| `insights` | `kind`, `key`, `payload jsonb`, `dismissed_at` | Materialised Radar signals, derived from transactions. |
+| `dismissed_signals` | `user_id`, `key`, `at` | Radar signals the user dismissed. Radar itself is computed on the device from transactions and not stored; keys are scoped to a month or an item. Not yet included in `export_my_data`. |
 
 `transactions` columns: `id uuid (client generated)`, `type`, `amount_minor bigint CHECK > 0`, `currency`, `category_id`, `merchant_name`, `account_id`, `to_account_id`, `local_date date`, `local_time time`, `notes`, `paid_by` (`'me'` or person id), `splits jsonb`, `counterparty_id`, `debt_direction`, `repayment_direction`, `goal_id`, `recurring_rule_id`, `occurrence_date`, `source`, `ai_confidence real`, `raw_input` (null unless opted in), `created_at`, `updated_at`, `deleted_at`, `version int`.
 
