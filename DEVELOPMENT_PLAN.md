@@ -77,4 +77,4 @@ The product owner's Home design was applied: new palette and tokens, gradient su
 
 ## Not implemented yet, so do not assume it works
 
-Deployed backend, live AI, creating goals, app lock.
+Deployed backend, live AI, app lock.

@@ -25,4 +25,5 @@ export * from './capture';
 export * from './regions';
 export * from './accounts';
 export * from './budgetInput';
+export * from './goalInput';
 export * from './onboarding';

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { addDays, nextDue, overdueOccurrences, type Budget, type RecurringRule } from '@nomi/core';
+import { addDays, nextDue, overdueOccurrences, type Budget, type Goal, type RecurringRule } from '@nomi/core';
 import { formatMoney } from '@nomi/core';
 import { BudgetSheet } from '@/features/planning/BudgetSheet';
+import { GoalSheet } from '@/features/planning/GoalSheet';
 import { RecurringSheet } from '@/features/recurring/RecurringSheet';
 import { space } from '@/design/tokens';
 import { useLedger } from '@/data/LedgerProvider';
@@ -14,7 +15,7 @@ import { Badge, Button, Chip, EmptyState, ErrorState, Money, ProgressBar, Screen
 type Section = 'Budgets' | 'Goals' | 'Recurring';
 const FREQ = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' } as const;
 
-/** Budgets and recurring payments can be added, changed and paused here. Goals are read-only for now. */
+/** Budgets, goals and recurring payments can be added and changed here. */
 export default function Planning() {
   const { state, retry } = useLedger();
   const toast = useToast();
@@ -22,6 +23,7 @@ export default function Planning() {
   const params = useLocalSearchParams<{ section?: string }>();
   const [section, setSection] = useState<Section>('Budgets');
   useEffect(() => { if (params.section === 'Recurring' || params.section === 'Budgets' || params.section === 'Goals') setSection(params.section); }, [params.section]);
+  const [goalSheet, setGoalSheet] = useState<{ open: boolean; editing: Goal | null }>({ open: false, editing: null });
   const [recurring, setRecurring] = useState<{ open: boolean; editing: RecurringRule | null }>({ open: false, editing: null });
   const [sheet, setSheet] = useState<{ open: boolean; editing: Budget | null }>({ open: false, editing: null });
   const ready = state.status === 'ready' ? state : null;
@@ -45,18 +47,25 @@ export default function Planning() {
         : <EmptyState icon="planning" title="No budgets yet" message="Set a monthly budget and Nomi will track it as you spend." actionLabel="Add a budget" onAction={() => setSheet({ open: true, editing: null })} />) : null}
       {ready ? <BudgetSheet visible={sheet.open} editing={sheet.editing} budgets={ready.snapshot.budgets} categories={ready.snapshot.categories} currency={ready.snapshot.profile.currency} onClose={() => setSheet({ open: false, editing: null })} /> : null}
 
-      {ready && section === 'Goals' ? (ready.summary.goals.length
-        ? <View style={{ gap: space.md }}>{ready.summary.goals.map((g) => (
-            <Surface key={g.goal.id} style={{ gap: space.sm }}>
-              <Text variant="bodyStrong">{g.goal.name}</Text>
-              <ProgressBar value={g.ratio} label={`${g.goal.name}, ${Math.round(g.ratio * 100)} percent saved`} />
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
-                <Text variant="callout" tone="muted" numeric>{formatMoney(g.savedMinor, c)} of {formatMoney(g.goal.targetMinor, c)}</Text>
-                <Text variant="callout" numeric>{Math.round(g.ratio * 100)}%</Text>
-              </View>
-              {g.reservedThisMonthMinor > 0 ? <Text variant="caption" tone="muted">{formatMoney(g.reservedThisMonthMinor, c)} still to set aside this month.</Text> : null}
-            </Surface>))}</View>
-        : <EmptyState icon="planning" title="No goals yet" message="Add a savings goal and Nomi will keep it in mind when estimating what you can spend." />) : null}
+      {ready && section === 'Goals' ? (
+        <View style={{ gap: space.md }}>
+          {ready.summary.goals.length ? ready.summary.goals.map((g) => (
+            <Pressable key={g.goal.id} accessibilityRole="button" accessibilityLabel={`${g.goal.name} goal. Tap to edit.`} onPress={() => setGoalSheet({ open: true, editing: g.goal })} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+              <Surface style={{ gap: space.sm }}>
+                <Text variant="bodyStrong">{g.goal.name}</Text>
+                <ProgressBar value={g.ratio} label={`${g.goal.name}, ${Math.round(g.ratio * 100)} percent saved`} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: space.md }}>
+                  <Text variant="callout" tone="muted" numeric>{formatMoney(g.savedMinor, c)} of {formatMoney(g.goal.targetMinor, c)}</Text>
+                  <Text variant="callout" numeric>{Math.round(g.ratio * 100)}%</Text>
+                </View>
+                {g.reservedThisMonthMinor > 0 ? <Text variant="caption" tone="muted">{formatMoney(g.reservedThisMonthMinor, c)} still to set aside this month.</Text> : null}
+              </Surface>
+            </Pressable>
+          )) : <EmptyState icon="planning" title="No goals yet" message="Add a savings goal and Nomi will keep it in mind when estimating what you can spend." actionLabel="Add a goal" onAction={() => setGoalSheet({ open: true, editing: null })} />}
+          {ready.summary.goals.length ? <Button label="Add a goal" icon="plus" variant="secondary" onPress={() => setGoalSheet({ open: true, editing: null })} /> : null}
+          <GoalSheet visible={goalSheet.open} editing={goalSheet.editing} currency={ready.snapshot.profile.currency} onClose={() => setGoalSheet({ open: false, editing: null })} />
+        </View>
+      ) : null}
 
       {ready && section === 'Recurring' ? (() => {
         const today = ready.summary.today, txs = ready.snapshot.transactions;

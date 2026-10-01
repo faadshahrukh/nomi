@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { REMINDER_DEFAULT_HOUR, buildExport, exportFileName, transactionsToCsv, ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { GOAL_ISSUE_MESSAGES, buildGoal, validateGoalInput, type GoalInput, REMINDER_DEFAULT_HOUR, buildExport, exportFileName, transactionsToCsv, ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
@@ -40,6 +40,8 @@ interface LedgerValue {
   markPaid: (ruleId: string, occurrenceDate: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Hides a Radar signal. It stays hidden for that month or item only. */
   dismissSignal: (key: string) => Promise<void>;
+  /** Creates or changes a savings goal (pass its id). It feeds Safe to Spend straight away. Bad input comes back as messages. */
+  saveGoal: (input: GoalInput, editingId?: string | null) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
   /** Saves this device's bill-reminder choice. Scheduling itself is done by the reminder scheduler. */
   setReminders: (s: ReminderSettings) => Promise<void>;
   /** Everything stored on this device as a JSON document and a transactions CSV. Nothing is sent anywhere. */
@@ -165,6 +167,16 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       try { await service.create(userIdFor(mode), payOccurrence(rule, occurrenceDate, state.summary.today)); } catch (e) {
         return { ok: false, message: e instanceof ValidationError && e.issues.some((i) => i.code === 'occurrence_already_recorded') ? 'That one is already recorded.' : "Couldn't record the payment. Nothing was changed." };
       }
+      await load(mode, true);
+      return { ok: true };
+    },
+    saveGoal: async (input, editingId) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const { profile, goals } = state.snapshot;
+      const v = validateGoalInput(input, goals, editingId ?? null, profile.currency, state.summary.today);
+      if (v.issues.length || v.targetMinor === null) return { ok: false, messages: v.issues.map((i) => GOAL_ISSUE_MESSAGES[i]) };
+      const existing = editingId ? goals.find((g) => g.id === editingId) ?? null : null;
+      await (await openRepository(mode)).putGoal(userIdFor(mode), buildGoal(userIdFor(mode), Crypto.randomUUID(), input, { targetMinor: v.targetMinor, monthlyMinor: v.monthlyMinor, savedMinor: v.savedMinor }, profile.currency, existing));
       await load(mode, true);
       return { ok: true };
     },
