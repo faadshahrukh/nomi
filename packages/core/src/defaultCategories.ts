@@ -29,3 +29,17 @@ export const DEFAULT_CATEGORIES: Category[] = [
   ]),
   ...INCOME.map((n) => ({ id: categoryId('income', n), userId: null, parentId: null, name: n, kind: 'income' as const, archivedAt: null })),
 ];
+
+const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
+
+/** SQL that seeds the system categories on the server. Generated, never hand-edited, so the server and the app cannot disagree. */
+export function categoriesSeedSql(): string {
+  const rows = DEFAULT_CATEGORIES.map((c) => `  (${q(c.id)}, null, ${c.parentId ? q(c.parentId) : 'null'}, ${q(c.name)}, ${q(c.kind)})`);
+  return [
+    '-- System categories. GENERATED from packages/core/src/defaultCategories.ts by `npm run gen:seed`. Do not edit by hand.',
+    'insert into public.categories (id, user_id, parent_id, name, kind) values',
+    rows.join(',\n'),
+    'on conflict (id) do nothing;',
+    '',
+  ].join('\n');
+}

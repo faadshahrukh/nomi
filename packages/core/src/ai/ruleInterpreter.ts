@@ -1,6 +1,6 @@
 import { findAmountMatches, equalSplit } from '../money';
 import type { Interpretation, ProposedTransaction } from './schema';
-import type { InterpretInput, Interpreter } from './index';
+import type { InterpretInput, Interpreter, InterpreterKind } from './interpreterTypes';
 
 /**
  * Deterministic, on-device interpreter. It is the offline fallback and the stand-in until the server model exists.
@@ -220,6 +220,7 @@ export function interpretWithRules(input: InterpretInput): Interpretation {
 }
 
 export class RuleBasedInterpreter implements Interpreter {
+  readonly lastKind: InterpreterKind = 'device';
   async interpret(input: InterpretInput): Promise<Interpretation> { return interpretWithRules(input); }
 }
 
