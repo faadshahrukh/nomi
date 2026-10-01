@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { ACCOUNT_ISSUE_MESSAGES, TransactionService, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { ACCOUNT_ISSUE_MESSAGES, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
@@ -19,6 +19,10 @@ interface LedgerValue {
   commit: (input: TransactionInput) => Promise<{ transaction: Transaction; summary: HomeSummary | null }>;
   /** Soft-deletes a transaction (used by Undo) and reloads. */
   undo: (id: string) => Promise<HomeSummary | null>;
+  /** Saves a corrected transaction through the same validation as a new one. Returns a plain message instead of throwing for rejected edits. */
+  updateTransaction: (id: string, draft: EditableDraft) => Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Brings back a deleted transaction (the Undo after a delete). */
+  restoreTransaction: (id: string) => Promise<HomeSummary | null>;
   /** Saves a change to the user's settings (for example the AI-processing choice) and reloads. */
   updateProfile: (patch: Partial<Omit<Profile, 'userId'>>) => Promise<void>;
   /** Validates and saves a new account. The first account becomes the default. Returns the problems instead of throwing for bad input. */
@@ -72,6 +76,27 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       const service = new TransactionService(repo, { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone, retainRawInput: profile.retainRawInput });
       const transaction = await service.create(userIdFor(mode), input);
       return { transaction, summary: await load(mode, true) };
+    },
+    updateTransaction: async (id, draft) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const input = finalizeDraft(draft);
+      if (!input) return { ok: false, message: 'Add an amount first.' };
+      const repo = await openRepository(mode);
+      const profile = state.snapshot.profile;
+      const service = new TransactionService(repo, { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone, retainRawInput: profile.retainRawInput });
+      try { await service.update(userIdFor(mode), id, input); } catch (e) {
+        // Deliberately generic for storage errors: they can echo SQL containing amounts and names.
+        return { ok: false, message: e instanceof ValidationError ? e.issues[0]?.message ?? 'Some details are not valid.' : "Couldn't save the change. Your original is unchanged." };
+      }
+      await load(mode, true);
+      return { ok: true };
+    },
+    restoreTransaction: async (id) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const repo = await openRepository(mode);
+      const profile = state.snapshot.profile;
+      await new TransactionService(repo, { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone }).restore(userIdFor(mode), id);
+      return load(mode, true);
     },
     updateProfile: async (patch) => {
       if (state.status !== 'ready') throw new Error('Ledger is not ready');

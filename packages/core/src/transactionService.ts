@@ -76,5 +76,19 @@ export class TransactionService {
     await this.repo.appendAudit(userId, this.audit(userId, id, 'delete', before, after));
   }
 
+  /** Brings back a deleted transaction (the Undo after a delete). Validated again, since the ledger may have changed meanwhile. */
+  async restore(userId: Id, id: Id): Promise<Transaction> {
+    const before = await this.repo.getTransaction(userId, id);
+    if (!before) throw new NotFoundError('Transaction');
+    if (!before.deletedAt) return before;
+    const after: Transaction = { ...before, deletedAt: null, updatedAt: this.opts.now().toISOString(), version: before.version + 1 };
+    const data = await this.load(userId);
+    const issues = validateTransaction(after, { ...data, transactions: data.transactions.filter((t) => t.id !== id) });
+    if (issues.length) throw new ValidationError(issues);
+    await this.repo.updateTransaction(userId, after, before.version);
+    await this.repo.appendAudit(userId, this.audit(userId, id, 'update', before, after));
+    return after;
+  }
+
   today(): string { return todayIn(this.opts.timezone, this.opts.now()); }
 }

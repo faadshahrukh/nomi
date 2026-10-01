@@ -8,12 +8,10 @@ import { useTheme } from '@/design/theme';
 import { Badge, Button, Money, Surface, Text } from '@/components/ui';
 import { pastDayLabel, shortDate } from '@/lib/format';
 import type { ReviewItem } from './captureReducer';
-import { FieldEditorSheet, type EditableField, type EditorContext } from './FieldEditorSheet';
-import { FieldRow } from './FieldRow';
+import { DraftFields } from './DraftFields';
+import type { EditableField, EditorContext } from './FieldEditorSheet';
 import { QuestionBlock } from './QuestionBlock';
 
-const TYPE_LABEL: Record<string, string> = { expense: 'Expense', income: 'Income', transfer: 'Transfer', refund: 'Refund', debt: 'Loan', repayment: 'Repayment', savings_contribution: 'Savings', goal_contribution: 'Goal contribution' };
-const isMove = (t: string) => t === 'transfer' || t === 'savings_contribution' || t === 'goal_contribution';
 
 /**
  * "Here is what I understood." Every field is tappable, so a wrong reading is a one-field fix, never a retype.
@@ -26,18 +24,15 @@ export function ReviewCard({ item, data, userId, ctx, onEdit, onSave, onSaveAnyw
   onEdit: (item: ReviewItem, patch: Partial<EditableDraft>) => void; onSave: (item: ReviewItem) => void; onSaveAnyway: (item: ReviewItem) => void; onDiscard: (item: ReviewItem) => void;
 }) {
   const { colors } = useTheme();
-  const [editing, setEditing] = useState<EditableField | null>(null);
   const d = item.draft;
+  const [request, setRequest] = useState<EditableField | null>(null);
+  const catName = ctx.categories.find((c) => c.id === d.categoryId)?.name ?? null;
+  const sharedMine = d.splits?.find((s) => s.personId === 'me')?.amountMinor;
   const cur = ctx.currency;
   const issues = validateDraft(d, userId, data);
   const blocked = issues.length > 0;
   const conversational = item.decision !== 'manual';
   const question = conversational ? nextQuestion(d, userId, data, { askPurpose: true, amountLabel: d.amountMinor ? formatMoney(d.amountMinor, cur, { symbol: false }) : undefined }) : null;
-  const name = (list: Array<{ id: string; name: string }>, id: string | null | undefined) => list.find((x) => x.id === id)?.name ?? null;
-  const missing = (code: string) => issues.some((i) => i.code === code);
-  const catName = name(ctx.categories, d.categoryId);
-  const sharedMine = d.splits?.find((s) => s.personId === 'me')?.amountMinor;
-  const payer = d.paidBy !== 'me' ? name(ctx.people, d.paidBy) : null;
   const saveLabel = blocked ? 'Save' : `Save ${formatMoney(sharedMine ?? d.amountMinor ?? 0, cur)}${d.type === 'expense' && !catName ? ' without a category' : ''}`;
 
   return (
@@ -60,35 +55,9 @@ export function ReviewCard({ item, data, userId, ctx, onEdit, onSave, onSaveAnyw
       {item.unsure && !question ? (
         <Surface variant="accent" padding="md"><Text variant="callout" style={{ color: colors.onAccentSoft }}>I'm not sure I read this right. Please check the details before saving.</Text></Surface>
       ) : null}
-      {question ? <QuestionBlock question={question} ctx={ctx} transactions={data.transactions} onAnswer={(patch) => onEdit(item, patch)} onMore={() => setEditing('category')} /> : null}
+      {question ? <QuestionBlock question={question} ctx={ctx} transactions={data.transactions} onAnswer={(patch) => onEdit(item, patch)} onMore={() => setRequest('category')} /> : null}
 
-      <View style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
-        <FieldRow label="Amount" value={d.amountMinor ? formatMoney(d.amountMinor, cur) : 'Add an amount'} status={d.amountMinor ? undefined : 'needed'} onPress={() => setEditing('amount')}
-          valueNode={d.amountMinor ? <Money minor={d.amountMinor} currency={cur} size="large" /> : undefined} />
-        <Divider />
-        <FieldRow label="Type" value={TYPE_LABEL[d.type] ?? d.type} onPress={() => setEditing('type')} />
-        <Divider />
-        {d.type === 'expense' || d.type === 'refund' || d.type === 'income' ? <>
-          <FieldRow label="Category" value={catName ?? 'None'} status={undefined} onPress={() => setEditing('category')} />
-          <Divider />
-        </> : null}
-        {d.type === 'expense' || d.type === 'refund' ? <><FieldRow label="Merchant" value={d.merchantName ?? 'None'} onPress={() => setEditing('merchant')} /><Divider /></> : null}
-        {payer ? (
-          <><FieldRow label="Paid by" value={`${payer}. Your share ${formatMoney(sharedMine ?? 0, cur)}`} hint="Change the amount to re-split equally." onPress={() => setEditing('amount')} /><Divider /></>
-        ) : (
-          <><FieldRow label={isMove(d.type) ? 'From' : 'Account'} value={name(ctx.accounts, d.accountId) ?? 'Choose an account'} status={missing('account_required') || missing('account_not_found') ? 'needed' : item.assumed.account && d.accountId ? 'assumed' : undefined} onPress={() => setEditing('account')} /><Divider /></>
-        )}
-        {isMove(d.type) ? <><FieldRow label="To" value={name(ctx.accounts, d.toAccountId) ?? 'Choose an account'} status={missing('to_account_required') ? 'needed' : undefined} onPress={() => setEditing('toAccount')} /><Divider /></> : null}
-        {d.type === 'debt' || d.type === 'repayment' ? <>
-          <FieldRow label="Person" value={name(ctx.people, d.counterpartyId) ?? 'Choose a person'} status={missing('counterparty_required') ? 'needed' : undefined} onPress={() => setEditing('person')} /><Divider />
-          <FieldRow label="Direction" value={({ lent: 'I lent it', borrowed: 'I borrowed it', received: 'They paid me back', paid: 'I paid them back' } as Record<string, string>)[(d.type === 'debt' ? d.debtDirection : d.repaymentDirection) ?? ''] ?? 'Choose'} status={missing('direction_required') ? 'needed' : undefined} onPress={() => setEditing('direction')} /><Divider />
-        </> : null}
-        {d.type === 'goal_contribution' ? <><FieldRow label="Goal" value={name(ctx.goals, d.goalId) ?? 'Choose a goal'} status={missing('goal_required') ? 'needed' : undefined} onPress={() => setEditing('goal')} /><Divider /></> : null}
-        <FieldRow label="Date" value={`${pastDayLabel(d.localDate, ctx.today)}${d.localDate !== ctx.today && pastDayLabel(d.localDate, ctx.today) !== shortDate(d.localDate, ctx.today) ? ` · ${shortDate(d.localDate, ctx.today)}` : ''}`}
-          status={item.assumed.date && d.localDate === ctx.today ? 'assumed' : undefined} onPress={() => setEditing('date')} />
-        <Divider />
-        <FieldRow label="Note" value={d.notes ?? 'None'} onPress={() => setEditing('notes')} />
-      </View>
+      <DraftFields draft={d} ctx={ctx} issues={issues} assumed={item.assumed} request={request} onRequestHandled={() => setRequest(null)} onEdit={(patch) => onEdit(item, patch)} />
 
       {item.duplicate ? (
         <Surface variant="accent" padding="md" style={{ gap: space.sm }} accessibilityRole="alert">
@@ -109,7 +78,6 @@ export function ReviewCard({ item, data, userId, ctx, onEdit, onSave, onSaveAnyw
         </View>
       ) : null}
 
-      <FieldEditorSheet field={editing} draft={d} ctx={ctx} onClose={() => setEditing(null)} onApply={(patch) => onEdit(item, patch)} />
     </Surface>
   );
 }

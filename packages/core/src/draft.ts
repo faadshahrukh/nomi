@@ -112,3 +112,13 @@ export function frequentCategories(txs: Transaction[], categories: Array<{ id: I
     .sort((a, b) => b.n - a.n || a.i - b.i);
   return ranked.slice(0, limit).map((r) => r.id);
 }
+
+/** A saved transaction as an editable draft, so editing uses exactly the same corrections and validation as capture. */
+export function draftFromTransaction(t: Transaction): EditableDraft {
+  return {
+    type: t.type, amountMinor: t.amountMinor, currency: t.currency, localDate: t.localDate, source: t.source, categoryId: t.categoryId, merchantName: t.merchantName,
+    accountId: t.accountId, toAccountId: t.toAccountId, localTime: t.localTime, notes: t.notes, paidBy: t.paidBy, splits: t.splits, counterpartyId: t.counterpartyId,
+    debtDirection: t.debtDirection, repaymentDirection: t.repaymentDirection, goalId: t.goalId, recurringRuleId: t.recurringRuleId, occurrenceDate: t.occurrenceDate,
+    aiConfidence: t.aiConfidence, rawInput: t.rawInput,
+  };
+}

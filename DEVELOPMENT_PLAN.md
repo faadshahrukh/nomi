@@ -40,8 +40,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | **Done as code and tests; not deployed.** Needs your Supabase, Google and Anthropic accounts to run live. See supabase/README.md |
 | 6 | Onboarding (welcome, about/region, optional email or Google sign-up, goals, first account, confirmation preference, optional budget, first capture), accounts screen, sign-in/out/delete in Profile | **Done**. Verified end to end in a browser build in empty mode. Sign-in screens are untested against a live backend. Only the account is required; the rest can be skipped |
 | 7 | Voice capture: permission, listening, finishing, editable transcript, and every failure with a typed way forward | **Done**. Verified in a browser build with a scripted recogniser. Real iOS/Android speech (including Bangla quality) is untested and needs a development build, not Expo Go |
-| 8 (next) | Transactions list: search, filters, detail, duplicate detection | |
-| 9 | Budgets, Money Pulse, Safe to Spend UI, What Changed UI | |
+| 8 | Transactions list: search (words and exact amounts), type tabs, period/account/category filters, detail screen, field-level edit, delete with Undo, duplicate warning on edit | **Done**. Verified end to end in a browser build. Core search/edit/restore logic is unit-tested (228 core tests) |
+| 9 (next) | Budgets, Money Pulse, Safe to Spend UI, What Changed UI | |
 | 10 | Recurring and Upcoming, Financial Radar V1 (deterministic signals, de-duplicated, capped) | |
 | 11 | Offline sync queue and conflict handling, notifications, privacy controls, export and delete | |
 | 12 | Accessibility and offline/error QA, analytics (no financial content), AI evaluation set | |
@@ -77,4 +77,4 @@ The product owner's Home design was applied: new palette and tokens, gradient su
 
 ## Not implemented yet, so do not assume it works
 
-Deployed backend, sign-in screens, live AI, voice, sync, notifications, Radar signals, creating accounts, budgets or goals, editing or deleting saved transactions, export, deletion, app lock.
+Deployed backend, live AI, sync, notifications, Radar signals, creating budgets, goals and recurring rules (beyond the one overall budget set in onboarding), export and deletion screens, app lock.

@@ -15,7 +15,7 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 | AI interpretation contract, validation, confirmation policy | **Built and tested**. An on-device rule-based interpreter is the live interpreter; the Claude adapter is not built |
 | Text capture end to end (type, review, correct, save, undo) | **Built** in the app |
 | Server: Postgres schema with row-level security, Claude interpreter Edge Function, sign-in adapter (email + Google), AI privacy setting | **Built and tested without live services**. Needs your Supabase, Google and Anthropic accounts to connect (see `supabase/README.md`). No sign-in screens yet (milestone 6) |
-| Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (read-only), Planning (read-only) and Insights (What changed) reading real stored data. Text capture, first-run onboarding, accounts and sign-in screens work. Voice capture is built (needs a development build on a phone). Editing saved records is not built |
+| Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (search, filters, detail, edit, delete), Planning (read-only) and Insights (What changed) reading real stored data. Text capture, first-run onboarding, accounts and sign-in screens work. Voice capture is built (needs a development build on a phone). Transactions can be searched, filtered, edited and deleted (with Undo) |
 | Backend (Supabase), auth, sync | Not started |
 | Voice capture | Not started |
 | Financial Radar, Insights, Money Circle UI, Ask Money | Not started |
