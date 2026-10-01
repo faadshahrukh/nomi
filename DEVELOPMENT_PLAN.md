@@ -16,11 +16,13 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 6. Goals are funded by contributions to a savings account. They are not virtual envelopes inside another account.
 7. Platform speech recognition on device for voice; Claude server-side for interpretation.
 8. Raw text and transcripts are not retained unless the user opts in.
+9. Sign-in is email + password and Google, via Supabase Auth. No phone OTP or other providers in MVP. (Confirmed by the product owner.)
+10. Subscription and paywall are out of the MVP. (Confirmed by the product owner.) No billing code, plan tiers or entitlement checks until it is scheduled.
 
 ## Open questions that affect later milestones
 
-- Sign-in method: email, phone OTP (common in Bangladesh), social login, or several.
-- Whether subscriptions/paywall (listed under Settings in the spec) are in MVP. Assumed out.
+- Google Cloud OAuth client IDs (iOS, Android, web) and a Supabase project, needed at milestone 5.
+- Spoken number words (see AI_SPEC.md, "Spoken amounts"): recommended approach is written down, awaiting a decision.
 - Safety-buffer default and whether to propose one at onboarding.
 - Acceptable Bangla speech-recognition quality on mid-range Android devices; may need a server-side fallback.
 - Notification channel and quiet hours for Radar.
@@ -35,8 +37,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 2 | Expo app shell: tokens, light/dark, navigation, reusable components, loading/empty/error/offline states | Next |
 | 3 | SQLite repository, seed/demo data (clearly flagged), Home reading real derived data | |
 | 4 | Text capture end to end with a stub interpreter, confirmation card, field-level correction | |
-| 5 | Server: Supabase schema + RLS migrations, auth, Claude interpreter Edge Function | |
-| 6 | Onboarding and first transaction | |
+| 5 | Server: Supabase schema + RLS migrations, auth (email + Google), Claude interpreter Edge Function | |
+| 6 | Onboarding (sign-up/sign-in with email or Google) and first transaction | |
 | 7 | Voice capture states and fallback | |
 | 8 | Transactions list: search, filters, detail, duplicate detection | |
 | 9 | Budgets, Money Pulse, Safe to Spend UI, What Changed UI | |

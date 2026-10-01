@@ -54,6 +54,16 @@ Absent on purpose: ids, numeric amounts, computed dates, balances, free-text ans
 9. An expense with an amount but no category, merchant or note triggers the `purpose` question ("What was the 5,000 for?").
 10. Multiple transactions in one input are proposed and decided individually.
 
+## Spoken amounts (proposed, not built)
+
+Platform speech recognition usually writes spoken numbers as digits ("450", "5,000"), so most voice input already passes the guard. When it returns words, the guard currently sees no amount and forces confirmation, which is safe but adds a tap. Recommended next step, in `extractAmounts`:
+
+1. Parse unambiguous number words in English (`four hundred fifty`, `five thousand`, `two lakh`, `one and a half thousand`) and Bangla (`দুই হাজার`, `পাঁচ শো`, `দেড় হাজার`), with unit tests for each.
+2. Keep colloquial shortcuts ambiguous on purpose. "Four fifty" could be 450, 4.50 or 4,050. Do not guess: ask "Was that ৳450?" using the leading candidate, requiring one tap.
+3. Always show the heard transcript beside the parsed amount so a misheard digit is visible.
+
+The guard stays in place regardless; word parsing only widens what counts as "the user said this amount".
+
 ## Confidence and confirmation policy
 
 Per-proposal confidence = min of the model's confidence for type, amount, date, account (when stated) and category (when named). The input-presence guard can lower amount confidence.

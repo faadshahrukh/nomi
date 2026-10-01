@@ -1,4 +1,4 @@
-# Nomi
+# Nomi (working name)
 
 A conversational personal-finance companion for iOS and Android. You tell it what happened with your money, by typing or speaking; it turns that into a structured transaction, updates your financial picture, and explains what changed.
 

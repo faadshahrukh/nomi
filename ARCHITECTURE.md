@@ -11,6 +11,7 @@ Status key: **[built]** exists and is tested, **[planned]** decided but not impl
 | On-device store | SQLite via `expo-sqlite` **[planned]** | Offline capture; fast lists. |
 | Backend | Supabase: Postgres + Row Level Security + Auth + Edge Functions **[planned]** | RLS gives the user/tenant boundary at the database. Edge Functions hold the LLM key. |
 | LLM | Claude via a server-side Edge Function, structured output **[planned]** | The key never ships in the app; only names and the user's text are sent. |
+| Sign-in | Supabase Auth: email + password (verified email, password reset) and Google **[planned]** | Decided with the product owner. Both resolve to one user; the same verified email links to one account, not two. |
 | Speech to text | Platform speech recognition on device first, text fallback **[planned]** | No raw audio leaves the device or is stored. Supports `bn-BD` and `en`. |
 
 These are recommendations made without a pre-existing codebase. They are cheap to change because the core depends on none of them.
@@ -88,6 +89,14 @@ The UI must show these components next to the number. `available` can be negativ
 - Raw input is dropped before save unless `retainRawInput` is on **[built]**.
 - Offline: client-generated ids, `version`, soft deletes and `updatedAt` are in place for sync **[built]**; the sync queue and conflict UI are **[planned]**. An unsent capture is kept in a local queue and never discarded **[planned]**.
 - Logging rule: never log amounts, merchants, notes, transcripts or names. Analytics events carry counts and timings only.
+
+## Authentication **[planned]**
+
+- Methods in MVP: email + password with email verification and password reset, and Google. No phone OTP, Apple or other providers yet.
+- Google on mobile uses the native Google sign-in flow and exchanges the Google ID token with Supabase (`signInWithIdToken`). This needs OAuth client IDs for iOS, Android and web from a Google Cloud project, supplied by the product owner.
+- The mobile app holds only the Supabase anon key plus the user's session. The session is stored in the device keychain/keystore (`expo-secure-store`), not AsyncStorage. Tokens refresh automatically; on expiry the app keeps unsent captures in the local queue and prompts for sign-in without discarding them.
+- Optional app lock (biometric/PIN) is a separate local gate and does not replace the session.
+- To verify before App Store submission: Apple's rules for apps that offer a third-party sign-in such as Google (guideline 4.8) may require an additional privacy-preserving option such as Sign in with Apple.
 
 ## Extension points
 
