@@ -15,6 +15,7 @@ import { MAX_CONTENT_WIDTH } from '@/design/tokens';
 import { NetworkProvider } from '@/providers/NetworkProvider';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { LedgerProvider, useLedger } from '@/data/LedgerProvider';
+import { SyncProvider } from '@/sync/SyncProvider';
 import { useReminderScheduler } from '@/notifications/useReminderScheduler';
 import { ToastProvider } from '@/components/ui';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -69,7 +70,9 @@ export default function RootLayout() {
         <NetworkProvider>
           <AuthProvider>
             <LedgerProvider>
-              <Frame />
+              <SyncProvider>
+                <Frame />
+              </SyncProvider>
             </LedgerProvider>
           </AuthProvider>
         </NetworkProvider>

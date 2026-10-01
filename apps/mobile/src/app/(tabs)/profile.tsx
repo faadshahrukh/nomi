@@ -5,6 +5,7 @@ import { useTheme, type SchemePreference } from '@/design/theme';
 import { useAuth } from '@/auth/AuthProvider';
 import { config } from '@/config';
 import { useLedger } from '@/data/LedgerProvider';
+import { useSync } from '@/sync/SyncProvider';
 import type { DataMode } from '@/data/repositories';
 import { Icon, ListRow, Screen, SectionHeader, Segmented, Surface, Text, useToast } from '@/components/ui';
 import { radius } from '@/design/tokens';
@@ -19,6 +20,7 @@ export default function Profile() {
   const { colors } = useTheme();
   const name = state.status === 'ready' ? state.snapshot.profile.displayName : null;
   const auth = useAuth();
+  const sync = useSync();
   const aiOn = state.status === 'ready' ? state.snapshot.profile.aiProcessing : true;
   const aiStatus = !config.backendConfigured ? "AI understanding isn't set up in this build, so messages are understood on this device."
     : !aiOn ? 'Messages are understood on this device only and never leave it.'
@@ -66,8 +68,10 @@ export default function Profile() {
               <ListRow icon="user" title="Sign out" subtitle="Your data stays on this device" showChevron onPress={() => { auth.service.signOut().catch(() => toast.show({ message: "Couldn't sign out. Try again.", tone: 'error' })); }} />
             </>
           ) : (
-            <ListRow icon="user" title="Sign in or create an account" subtitle={config.backendConfigured ? 'Optional. Turns on AI understanding.' : "Not set up in this version"} showChevron onPress={() => router.push('/auth')} />
+            <ListRow icon="user" title="Sign in or create an account" subtitle={config.backendConfigured ? 'Optional. Backs up your data and turns on AI understanding.' : "Not set up in this version"} showChevron onPress={() => router.push('/auth')} />
           )}
+          <ListRow icon="shield" title="Backup and sync" showChevron onPress={() => router.push('/sync')}
+            subtitle={sync.conflicts.length ? `${sync.conflicts.length} to look at` : sync.status === 'off' ? 'Off' : sync.status === 'offline' ? 'Offline, will sync later' : sync.pending ? `${sync.pending} waiting` : 'Up to date'} />
         </Surface>
       </View>
 

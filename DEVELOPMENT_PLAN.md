@@ -43,8 +43,8 @@ One deliberate overlap: Money Circle UI is post-MVP, but the spec's own engine e
 | 8 | Transactions list: search (words and exact amounts), type tabs, period/account/category filters, detail screen, field-level edit, delete with Undo, duplicate warning on edit | **Done**. Verified end to end in a browser build. Core search/edit/restore logic is unit-tested (228 core tests) |
 | 9 | Budgets (add, edit, remove per category or overall), Money Pulse and Safe to Spend detail screens with the itemised calculation and an editable safety buffer, What Changed drivers that open the matching transactions | **Done**. Verified end to end in a browser build. Validation and delete are unit-tested (234 core tests) |
 | 10 | Recurring bills and income (add, edit, pause/resume, mark paid, overdue), Upcoming links, Financial Radar V1: eight deterministic signal kinds, de-duplicated, capped at 5, 2 on Home, dismissible per month or item | **Done**. Verified end to end in a browser build. Radar and recurring logic are unit-tested (250 core tests) |
-| 11 (next) | Offline sync queue and conflict handling, notifications, privacy controls, export and delete | |
-| 12 | Accessibility and offline/error QA, analytics (no financial content), AI evaluation set | |
+| 11 | Offline-first sync (queue, version-checked transactions, merge or ask on conflict, server functions), bill reminders (local, no amounts), privacy and data screen (export JSON/CSV, retention switch, delete device data, delete account) | **Done** except app lock. Sync logic is verified against real Postgres with two simulated phones; the live Supabase, a real phone's notifications and the share sheet are untested |
+| 12 (next) | Accessibility and offline/error QA, analytics (no financial content), AI evaluation set | |
 
 ## Definition of done per feature
 
@@ -77,4 +77,4 @@ The product owner's Home design was applied: new palette and tokens, gradient su
 
 ## Not implemented yet, so do not assume it works
 
-Deployed backend, live AI, sync, notifications, creating goals, export and deletion screens, app lock.
+Deployed backend, live AI, creating goals, app lock.

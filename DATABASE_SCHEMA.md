@@ -25,3 +25,11 @@ Indexes: `(user_id, local_date)`, `(user_id, category_id, local_date)`, `(user_i
 On device the row-level scoping is done by always filtering on `user_id` in the repository; on the server it is enforced by RLS.
 
 Export and deletion: a user can export all rows as CSV/JSON and delete their account, which cascades to every table above.
+
+
+## Sync additions (migration 20250101000500)
+
+- Every synced table (`profiles`, `accounts`, `people`, `goals`, `recurring_rules`, `budgets`, `transactions`) gains `server_rev bigint`, stamped from `sync_rev_seq` on every insert and update by a trigger. Devices pull "everything after the last stamp I saw" (with a small overlap, since stamps are only approximately in commit order).
+- `budgets` gains `deleted_at` so a deletion can reach other devices.
+- `sync_push(items jsonb)` applies a batch as the caller (row-level security applies). Per item it answers `ok`, `conflict` (transactions only: the base version no longer matches, with the server's copy) or `rejected` (error class only, never the values). `sync_pull(since, limit)` returns changed rows in pages.
+- Device-only SQLite tables: `settings` (reminder choice, sync position), `sync_outbox`, `sync_conflicts`, `dismissed_signals`.

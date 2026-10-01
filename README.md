@@ -16,7 +16,7 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 | Text capture end to end (type, review, correct, save, undo) | **Built** in the app |
 | Server: Postgres schema with row-level security, Claude interpreter Edge Function, sign-in adapter (email + Google), AI privacy setting | **Built and tested without live services**. Needs your Supabase, Google and Anthropic accounts to connect (see `supabase/README.md`). No sign-in screens yet (milestone 6) |
 | Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (search, filters, detail, edit, delete), budgets, Money Pulse and Safe to Spend details, Planning (read-only) and Insights (What changed) reading real stored data. Text capture, first-run onboarding, accounts and sign-in screens work. Voice capture is built (needs a development build on a phone). Transactions can be searched, filtered, edited and deleted (with Undo) |
-| Backend (Supabase), auth, sync | Not started |
+| Backend (Supabase), auth, sync | **Built as code and tested** against real Postgres; not deployed (needs your Supabase project) |
 | Voice capture | Not started |
 | Financial Radar V1 (Home and `/radar`), Insights (What changed) | **Built**, rule-based, no AI |
 | Money Circle UI, Ask Money | Not started |

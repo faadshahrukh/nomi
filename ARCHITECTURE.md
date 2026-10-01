@@ -21,7 +21,7 @@ These are recommendations made without a pre-existing codebase. They are cheap t
 ```
 UI (apps/mobile: screens, components)   shell, design system, states [built]; feature screens [planned]
   ↓ calls
-Application services             TransactionService [built]; capture orchestration, sync [planned]
+Application services             TransactionService [built]; capture orchestration, sync engine **[built, tested against Postgres]**
   ↓ uses
 Domain (packages/core)           ledger, budgets, recurring, safeToSpend, whatChanged, homeSummary, money, dates [built]
 AI contract (packages/core/ai)   schema, resolve, policy [built]
@@ -117,7 +117,7 @@ The UI must show these components next to the number. `available` can be negativ
 - `LedgerRepository` takes the acting `userId` on every call and scopes to it **[built, in-memory]**. Production enforcement is Postgres RLS (`user_id = auth.uid()`) **[planned]**. Tests cover cross-user read, update, delete and insert.
 - Updates use optimistic concurrency (`version`). Deletes are soft. Every create/update/delete appends an audit entry with changed fields **[built]**.
 - Raw input is dropped before save unless `retainRawInput` is on **[built]**.
-- Offline: client-generated ids, `version`, soft deletes and `updatedAt` are in place for sync **[built]**; the sync queue and conflict UI are **[planned]**. An unsent capture is kept in a local queue and never discarded **[planned]**.
+- Offline and sync **[built; logic verified on real Postgres, not on a live Supabase]**: the device is the source of truth and works with no connection. Every write goes through `SyncingRepository`, which queues the change in the same database transaction (`sync_outbox`). `runSync` sends the queue through `sync_push`, then fetches changes with `sync_pull` using a global `server_rev` stamp. Transactions are version-checked: a stale change comes back as a conflict, and `resolveTransactionConflict` either adopts the server copy, merges wording-only differences, or holds the clash for the user (amount, date, account, split, deleted-or-not). Other records are last-write-wins. Budgets carry a `deleted_at` marker because they are the one thing deleted for real. A device syncs with one account only. Not synced on purpose: reminders, dismissed Radar items, the default account, the audit trail.
 - Logging rule: never log amounts, merchants, notes, transcripts or names. Analytics events carry counts and timings only.
 
 ## Server (`supabase/`) **[built, not deployed]**

@@ -6,6 +6,8 @@ Everything the server needs, as code:
 |---|---|
 | `migrations/20250101000000_init.sql` | Schema, integrity rules, row-level security, AI allowance, export and account deletion |
 | `migrations/20250101000100_system_categories.sql` | The shared category list. Generated: `npm run gen:seed -w @nomi/core` |
+| `migrations/20250101000200…000400` | Profile name, onboarding fields, dismissed Radar signals |
+| `migrations/20250101000500_sync.sql` | Offline sync: `sync_push` and `sync_pull`, version-checked transactions, deletion markers for budgets, change stamps |
 | `functions/interpret/` | Edge Function that turns a sentence into a structured proposal with Claude |
 | `config.toml` | Local and deploy configuration: email confirmation, Google, redirect URLs, JWT required |
 | `.env.example` | The server-side secrets (names only) |
@@ -14,6 +16,7 @@ Everything the server needs, as code:
 
 **Verified by automated tests (run on every change):**
 - The migrations apply to a real PostgreSQL (PGlite) and the rules hold when attacked: users cannot read, change, delete or reference each other's rows; anonymous callers get nothing; system categories cannot be changed; the audit log cannot be altered; money, transfer, loan and split rules are enforced by the database itself; per-day AI allowance; export contains only the caller's data; account deletion removes everything of theirs and nothing of anyone else's.
+- Sync, with two simulated phones talking to the real `sync_push` / `sync_pull` on PostgreSQL: first upload, a second phone receiving everything, edits and deletions travelling, wording-only clashes merged, amount/date/account clashes held for a person to decide, delete-versus-edit, a lost reply replayed harmlessly, a refused change staying queued while the rest syncs, one account never reaching another's rows, anonymous callers refused.
 - The Claude request is built correctly for the current model, only names and the user's sentence are sent, replies are validated against the schema, and refusals, truncation and API errors become safe codes. The Edge Function's logic (authentication order, validation, allowance, privacy setting, error mapping, no content in logs or responses) is tested without Deno. The function entry bundles with every import resolved.
 - The app's sign-in adapter against a stub of the Supabase client (including the Google code flow and every failure path), session chunking for secure storage, and when the app uses AI versus on-device understanding.
 
@@ -34,7 +37,7 @@ supabase login
 supabase link --project-ref <project-ref>
 
 # database
-supabase db push                   # applies both migrations
+supabase db push                   # applies all migrations
 
 # Google: in the dashboard, Authentication -> Providers -> Google: paste client ID and secret.
 # Redirect URLs: Authentication -> URL Configuration: add  nomi://auth/callback

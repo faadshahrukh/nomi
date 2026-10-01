@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import {
-  DEMO_USER_ID, InMemoryLedgerRepository, SqlLedgerRepository, buildProfile, migrate, regionForTimezone, seedDemoData, seedSystemCategories, todayIn,
+  DEMO_USER_ID, InMemoryLedgerRepository, SqlLedgerRepository, SyncingRepository, buildProfile, migrate, regionForTimezone, seedDemoData, seedSystemCategories, todayIn,
   type LedgerRepository, type Profile,
 } from '@nomi/core';
 import { appNow } from './clock';
@@ -26,12 +26,14 @@ export function fallbackProfile(userId: string): Profile {
 }
 
 const cache = new Map<DataMode, Promise<LedgerRepository>>();
+const wrapped = new Map<DataMode, LedgerRepository>();
 
 /**
- * Opens (once per mode) the repository for a mode. Native uses on-device SQLite. Web has no durable store in this milestone,
- * so it uses an in-memory repository: fine for previews, and data is lost on reload.
+ * The plain repository for a mode. Sync works on this one: what it applies from the server must not be queued to be sent back.
+ * Native uses on-device SQLite. Web has no durable store in this milestone, so it uses an in-memory repository: fine for previews,
+ * and data is lost on reload.
  */
-export function openRepository(mode: DataMode): Promise<LedgerRepository> {
+export function openRawRepository(mode: DataMode): Promise<LedgerRepository> {
   let p = cache.get(mode);
   if (!p) {
     p = (async () => {
@@ -51,4 +53,16 @@ export function openRepository(mode: DataMode): Promise<LedgerRepository> {
     cache.set(mode, p);
   }
   return p;
+}
+
+/**
+ * The repository the app writes through. For the user's own data every write is also queued for the server (so signing in later, or
+ * working offline, loses nothing). Example data is never queued.
+ */
+export async function openRepository(mode: DataMode): Promise<LedgerRepository> {
+  const raw = await openRawRepository(mode);
+  if (mode === 'demo') return raw;
+  let w = wrapped.get(mode);
+  if (!w) { w = new SyncingRepository(raw); wrapped.set(mode, w); }
+  return w;
 }
