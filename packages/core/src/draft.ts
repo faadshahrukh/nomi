@@ -97,3 +97,18 @@ export function findPossibleDuplicate(d: TransactionInput, existing: Transaction
     && t.accountId === (d.accountId ?? null) && t.toAccountId === (d.toAccountId ?? null) && !t.recurringRuleId
     && (norm(t.merchantName) === norm(d.merchantName ?? null) || (t.categoryId !== null && t.categoryId === (d.categoryId ?? null)))) ?? null;
 }
+
+/**
+ * Categories to offer as quick answers: the ones the user actually uses most (leaf categories first), topped up with
+ * common defaults so a new user still gets a sensible list. Archived and wrong-kind categories are excluded.
+ */
+export function frequentCategories(txs: Transaction[], categories: Array<{ id: Id; parentId: Id | null; kind: 'expense' | 'income'; archivedAt: string | null }>, kind: 'expense' | 'income', limit = 8): Id[] {
+  const usable = categories.filter((c) => c.kind === kind && !c.archivedAt);
+  const isParent = new Set(usable.map((c) => c.parentId).filter((x): x is Id => !!x));
+  const counts = new Map<Id, number>();
+  for (const t of txs) if (!t.deletedAt && t.categoryId) counts.set(t.categoryId, (counts.get(t.categoryId) ?? 0) + 1);
+  const ranked = usable.filter((c) => !isParent.has(c.id) || c.parentId !== null)
+    .map((c, i) => ({ id: c.id, n: counts.get(c.id) ?? 0, i }))
+    .sort((a, b) => b.n - a.n || a.i - b.i);
+  return ranked.slice(0, limit).map((r) => r.id);
+}

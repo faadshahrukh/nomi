@@ -231,3 +231,17 @@ describe('end to end: words in, ledger and summary change', () => {
     expect(buildHomeSummary(await load(), TODAY).safeToSpend.availableMinor).toBe(sBefore.safeToSpend.availableMinor);
   });
 });
+
+import { frequentCategories } from '../src';
+describe('frequentCategories', () => {
+  it('ranks by use, then falls back to defaults, and respects kind', () => {
+    const top = frequentCategories(demo.transactions, DEFAULT_CATEGORIES, 'expense', 5);
+    expect(top).toHaveLength(5);
+    expect(new Set(top).size).toBe(5);
+    const counts = (id: string) => demo.transactions.filter((t) => t.categoryId === id).length;
+    expect(counts(top[0]!)).toBeGreaterThanOrEqual(counts(top[1]!));
+    expect(top.every((id) => DEFAULT_CATEGORIES.find((c) => c.id === id)!.kind === 'expense')).toBe(true);
+    expect(frequentCategories([], DEFAULT_CATEGORIES, 'income', 3).every((id) => id.startsWith('cat.income.'))).toBe(true);
+    expect(frequentCategories([], DEFAULT_CATEGORIES, 'expense', 3)).toEqual(['cat.food.groceries', 'cat.food.dining', 'cat.food.coffee']);
+  });
+});

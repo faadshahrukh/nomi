@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { buildHomeSummary, todayIn, type HomeSummary, type LedgerSnapshot } from '@nomi/core';
+import * as Crypto from 'expo-crypto';
+import { TransactionService, buildHomeSummary, todayIn, type HomeSummary, type LedgerSnapshot, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
@@ -12,8 +13,12 @@ interface LedgerValue {
   state: State;
   mode: DataMode;
   setMode: (m: DataMode) => void;
-  /** Reloads everything from storage without showing a loading state. Call after any write. */
-  refresh: () => Promise<void>;
+  /** Reloads everything from storage without showing a loading state. Returns the fresh summary (null if loading failed). */
+  refresh: () => Promise<HomeSummary | null>;
+  /** Saves a transaction through the validated write path, reloads, and returns the saved row with the new summary. Throws if validation or storage fails. */
+  commit: (input: TransactionInput) => Promise<{ transaction: Transaction; summary: HomeSummary | null }>;
+  /** Soft-deletes a transaction (used by Undo) and reloads. */
+  undo: (id: string) => Promise<HomeSummary | null>;
   /** Full reload with the loading state, for the error screen's Retry button. */
   retry: () => void;
 }
@@ -26,7 +31,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [version, setVersion] = useState(0);
 
-  const load = useCallback(async (m: DataMode, quiet: boolean) => {
+  const load = useCallback(async (m: DataMode, quiet: boolean): Promise<HomeSummary | null> => {
     if (!quiet) setState({ status: 'loading' });
     try {
       const repo = await openRepository(m);
@@ -37,10 +42,13 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       ]);
       const snapshot: LedgerSnapshot = { profile: profile ?? fallbackProfile(userId), accounts, categories, people, transactions, budgets, recurringRules, goals };
       const today = todayIn(snapshot.profile.timezone, appNow());
-      setState({ status: 'ready', snapshot, summary: buildHomeSummary(snapshot, today) });
+      const summary = buildHomeSummary(snapshot, today);
+      setState({ status: 'ready', snapshot, summary });
+      return summary;
     } catch {
       // Deliberately no error details: storage errors can contain SQL with financial values.
       setState({ status: 'error' });
+      return null;
     }
   }, []);
 
@@ -49,7 +57,23 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<LedgerValue>(() => ({
     state, mode,
     setMode: (m) => setModeState(m),
-    refresh: async () => { await load(mode, true); },
+    refresh: () => load(mode, true),
+    commit: async (input) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const repo = await openRepository(mode);
+      const profile = state.snapshot.profile;
+      const service = new TransactionService(repo, { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone, retainRawInput: profile.retainRawInput });
+      const transaction = await service.create(userIdFor(mode), input);
+      return { transaction, summary: await load(mode, true) };
+    },
+    undo: async (id) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const repo = await openRepository(mode);
+      const profile = state.snapshot.profile;
+      const service = new TransactionService(repo, { now: appNow, newId: () => Crypto.randomUUID(), timezone: profile.timezone });
+      await service.remove(userIdFor(mode), id);
+      return load(mode, true);
+    },
     retry: () => setVersion((v) => v + 1), // forces a reload even when the mode has not changed
   }), [state, mode, load]);
 

@@ -6,6 +6,31 @@ Implemented in `packages/core/src/ai`. The model adapter that calls an LLM is **
 
 The model reads language and returns a structured proposal. Deterministic code parses amounts, resolves dates, looks up ids, validates against the ledger and decides what happens next. The model has no access to balances, tools, or write paths.
 
+## Status
+
+- **Built:** the schema, deterministic resolution and validation, the confirmation policy, the on-device `RuleBasedInterpreter`, and the app's capture flow. The rule-based interpreter is what runs today, so capture works offline.
+- **Not built:** the Claude adapter (milestone 5) and speech recognition (milestone 7). When the adapter exists it implements the same `Interpreter` port; the rule-based interpreter stays as the offline and failure fallback.
+
+## Rule-based interpreter (built)
+
+`packages/core/src/ai/ruleInterpreter.ts`. Deterministic, English plus a modest Bangla and mixed vocabulary. It handles the common phrasings of every spec example: simple and multiple expenses, income, transfers and withdrawals, loans and repayments, refunds, shared expenses ("Rahim paid 1,500, my share was 750", "split dinner 1,200 with Rahim"), relative dates ("yesterday", "3 days ago", "12 March", Bangla "আজ/গতকাল"), accounts by name or alias, merchants (a known list plus capitalised names after "at/from"), and categories from keywords.
+
+It is intentionally conservative: it returns nulls instead of guesses. Examples: several competing numbers with no currency marker leave the amount empty (the app asks); a number followed by "th", a month name, "days ago" or "people" is not treated as an amount; a transfer without a clear source leaves the source empty; chit-chat returns `not_a_transaction`. Phrasings it does not recognise become "I couldn't find a transaction in that" with manual entry, never a wrong save. Commas inside numbers ("10,000") are not clause breaks.
+
+Policy additions made in this milestone:
+- Transfers, savings and goal contributions never default the source account, even if the user has a default; the app asks.
+- Fields the engine filled in without being told (date, account) are returned as `assumed` and shown with an "Assumed" label until the user sets them.
+
+## Correction, questions and duplicates (built)
+
+All in `packages/core/src/draft.ts`, used by the app's review card.
+
+- `EditableDraft` is a transaction the user is still completing (amount may be missing). `validateDraft` returns every reason it cannot be saved; Save stays disabled until that list is empty.
+- `reviseDraft(draft, patch)` applies a field correction and keeps the rest coherent: changing the type clears fields that no longer apply (a transfer has no category, income has no destination account), and changing the amount of a shared expense re-splits equally among the same people so totals still add up.
+- `nextQuestion` returns the single most useful missing item, most important first: amount, then (conversational mode only) purpose, account, destination account, person, direction, goal, date. Manual entry does not demand a purpose or category.
+- `findPossibleDuplicate` flags a live transaction with the same type, amount, accounts, day and merchant or category (recurring bills excluded). The app warns and offers "Save anyway".
+- `frequentCategories` ranks the user's own most-used categories for quick answers, topped up with defaults.
+
 ## Pipeline
 
 ```

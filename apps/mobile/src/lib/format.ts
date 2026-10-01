@@ -29,3 +29,10 @@ export function monthRangeLabel(keys: string[]): string {
   const name = (k: string) => MONTHS[Number(k.slice(5, 7)) - 1]!;
   return sorted.length === 1 ? MONTHS_LONG[Number(sorted[0]!.slice(5, 7)) - 1]! : `${name(sorted[0]!)}–${name(sorted[sorted.length - 1]!)}`;
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** "Mon 10 Mar" for date pickers. */
+export function weekdayDate(date: LocalDate, today: LocalDate): string {
+  const { y, m, d } = parseLocalDate(date);
+  return `${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${shortDate(date, today)}`;
+}

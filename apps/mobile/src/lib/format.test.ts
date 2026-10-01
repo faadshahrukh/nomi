@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { monthRangeLabel, pastDayLabel, shortDate, upcomingLabel } from './format';
+import { monthRangeLabel, pastDayLabel, shortDate, upcomingLabel, weekdayDate } from './format';
 
 describe('date labels', () => {
   it('labels past days', () => {
@@ -18,5 +18,9 @@ describe('date labels', () => {
     expect(monthRangeLabel(['2025-02', '2025-01', '2024-12'])).toBe('Dec–Feb');
     expect(monthRangeLabel(['2025-02'])).toBe('February');
     expect(shortDate('2025-03-05', '2025-03-15')).toBe('5 Mar');
+  });
+  it('names the weekday for pickers', () => {
+    expect(weekdayDate('2025-03-15', '2025-03-15')).toBe('Sat 15 Mar');
+    expect(weekdayDate('2025-03-10', '2025-03-15')).toBe('Mon 10 Mar');
   });
 });

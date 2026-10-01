@@ -10,10 +10,11 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 
 | Area | State |
 |---|---|
-| Deterministic finance core (`packages/core`) | **Built and tested** (98 tests, including the real SQL run against SQLite) |
+| Deterministic finance core (`packages/core`) | **Built and tested** (131 tests, including the real SQL run against SQLite) |
 | On-device storage (SQLite), demo data, Home summary | **Built**. Native only; web preview uses an in-memory store |
-| AI interpretation contract, validation, confirmation policy | **Built and tested** (no model adapter yet) |
-| Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (read-only), Planning (read-only) and Insights (What changed) reading real stored data. Capture, onboarding, auth and editing are not built |
+| AI interpretation contract, validation, confirmation policy | **Built and tested**. An on-device rule-based interpreter is the live interpreter; the Claude adapter is not built |
+| Text capture end to end (type, review, correct, save, undo) | **Built** in the app |
+| Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (read-only), Planning (read-only) and Insights (What changed) reading real stored data. Text capture works. Voice, onboarding, auth and editing saved records are not built |
 | Backend (Supabase), auth, sync | Not started |
 | Voice capture | Not started |
 | Financial Radar, Insights, Money Circle UI, Ask Money | Not started |

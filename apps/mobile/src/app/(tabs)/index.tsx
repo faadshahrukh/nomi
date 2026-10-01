@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { space } from '@/design/tokens';
 import { appNow } from '@/data/clock';
 import { useLedger } from '@/data/LedgerProvider';
-import { CaptureCard } from '@/features/home/CaptureCard';
+import { CaptureFlow } from '@/features/capture/CaptureFlow';
 import { DemoBanner } from '@/features/home/DemoBanner';
 import { HomeHeader } from '@/features/home/HomeHeader';
 import { HomeSkeleton } from '@/features/home/HomeSkeleton';
@@ -23,13 +23,13 @@ export default function HomeScreen() {
   const toast = useToast();
   const router = useRouter();
   const { state, mode, retry } = useLedger();
-  const notConnected = () => toast.show({ message: "Capture isn't connected yet. It arrives in the next milestone.", tone: 'info' });
+  const notConnected = () => toast.show({ message: "Voice capture isn't built yet. Type it for now.", tone: 'info' });
 
   return (
     <Screen>
       <HomeHeader now={appNow()} onNotifications={() => router.push('/more')} onProfile={() => router.push('/more')} />
       {mode === 'demo' && state.status === 'ready' ? <DemoBanner /> : null}
-      <CaptureCard onSubmitText={notConnected} onMic={notConnected} />
+      <CaptureFlow onMic={notConnected} />
 
       {state.status === 'loading' ? <HomeSkeleton /> : null}
       {state.status === 'error' ? <ErrorState title="Couldn't load your money" message="Your data is safe on this device. Try again." onRetry={retry} /> : null}
