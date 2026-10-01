@@ -72,6 +72,12 @@ export interface Goal {
   targetDate: LocalDate | null; monthlyContributionMinor: number | null; openingSavedMinor: number;
 }
 
+export interface Profile {
+  userId: Id; country: string; currency: CurrencyCode; timezone: string; locale: 'en' | 'bn' | 'mixed';
+  confirmationPref: 'always_confirm' | 'auto_save_high_confidence';
+  highImpactMinor: number; safetyBufferMinor: number; retainRawInput: boolean; defaultAccountId: Id | null;
+}
+
 export interface LedgerData {
   accounts: Account[]; categories: Category[]; people: Person[]; transactions: Transaction[];
 }

@@ -1,4 +1,5 @@
 import { diffDays, endOfMonth, startOfMonth, type LocalDate } from './dates';
+import { goalSavedMinor } from './goals';
 import { accountBalance } from './ledger';
 import { upcomingObligations, type UpcomingItem } from './recurring';
 import type { Account, Goal, RecurringRule, Transaction } from './types';
@@ -51,7 +52,7 @@ export function safeToSpend(input: SafeToSpendInput): SafeToSpend {
   const monthStart = startOfMonth(today);
   const goalReserves: GoalReserve[] = input.goals.map((g) => {
     const contribs = input.transactions.filter((t) => !t.deletedAt && t.type === 'goal_contribution' && t.goalId === g.id);
-    const saved = g.openingSavedMinor + contribs.reduce((s, t) => s + t.amountMinor, 0);
+    const saved = goalSavedMinor(g, input.transactions);
     const thisMonth = contribs.filter((t) => t.localDate >= monthStart && t.localDate <= endOfMonth(today)).reduce((s, t) => s + t.amountMinor, 0);
     const remaining = Math.max(0, g.targetMinor - saved);
     const required = remaining === 0 ? 0

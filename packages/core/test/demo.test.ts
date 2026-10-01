@@ -1,0 +1,132 @@
+import { describe, expect, it } from 'vitest';
+import {
+  DEFAULT_CATEGORIES, DEMO_USER_ID, accountBalance, buildDemoData, buildHomeSummary, budgetStatus, floorToWhole, formatMoney, roundToWhole, seedDemoData,
+  seedSystemCategories, upcomingObligations, validateTransaction, type LedgerSnapshot,
+} from '../src';
+import { tx } from './fixtures';
+import { sqlRepo } from './nodeSqlite';
+
+const TODAY = '2025-03-15';
+const snapshotOf = (today = TODAY): LedgerSnapshot => { const d = buildDemoData(today); return { ...d, categories: DEFAULT_CATEGORIES }; };
+
+describe('default categories', () => {
+  it('has unique ids, valid parents, and the spec groups', () => {
+    const ids = DEFAULT_CATEGORIES.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const c of DEFAULT_CATEGORIES) if (c.parentId) expect(ids).toContain(c.parentId);
+    for (const name of ['Food', 'Transport', 'Bills', 'Shopping', 'Health', 'Entertainment', 'Education', 'Family', 'Finance', 'Travel', 'Other']) expect(DEFAULT_CATEGORIES.some((c) => c.name === name && !c.parentId)).toBe(true);
+    expect(DEFAULT_CATEGORIES.find((c) => c.id === 'cat.food.groceries')?.parentId).toBe('cat.food');
+  });
+});
+
+describe('demo data', () => {
+  it('is deterministic and belongs only to the demo user', () => {
+    expect(buildDemoData(TODAY)).toEqual(buildDemoData(TODAY));
+    const d = buildDemoData(TODAY);
+    expect(DEMO_USER_ID).toBe('demo-user');
+    expect([...d.accounts, ...d.people, ...d.goals, ...d.budgets, ...d.recurringRules, ...d.transactions].every((x) => x.userId === DEMO_USER_ID)).toBe(true);
+  });
+  it('contains only valid, non-future transactions that cover every transaction type', () => {
+    const d = buildDemoData(TODAY);
+    const ledger = { accounts: d.accounts, categories: DEFAULT_CATEGORIES, people: d.people, transactions: d.transactions };
+    for (const t of d.transactions) {
+      expect(validateTransaction(t, ledger), t.id).toEqual([]);
+      expect(t.localDate <= TODAY).toBe(true);
+    }
+    const types = new Set(d.transactions.map((t) => t.type));
+    for (const k of ['expense', 'income', 'transfer', 'refund', 'debt', 'repayment', 'savings_contribution', 'goal_contribution']) expect(types).toContain(k);
+    expect(d.transactions.some((t) => t.splits && t.paidBy !== 'me')).toBe(true);
+  });
+  it('keeps every account at a believable, non-negative balance', () => {
+    const d = buildDemoData(TODAY);
+    for (const a of d.accounts) expect(accountBalance(a, d.transactions), a.name).toBeGreaterThan(0);
+  });
+  it('works for any day of the month, not just one date', () => {
+    for (const day of ['2025-01-31', '2025-02-28', '2025-03-01', '2025-03-31', '2024-02-29', '2025-12-31']) {
+      const d = buildDemoData(day);
+      const ledger = { accounts: d.accounts, categories: DEFAULT_CATEGORIES, people: d.people, transactions: d.transactions };
+      expect(d.transactions.every((t) => validateTransaction(t, ledger).length === 0), day).toBe(true);
+      expect(() => buildHomeSummary({ ...d, categories: DEFAULT_CATEGORIES }, day), day).not.toThrow();
+    }
+  });
+  it('seeds into SQLite once, and a second call changes nothing', async () => {
+    const repo = await sqlRepo();
+    expect(await seedDemoData(repo, TODAY)).toBe(true);
+    expect(await seedDemoData(repo, TODAY)).toBe(false);
+    const d = buildDemoData(TODAY);
+    expect((await repo.listTransactions(DEMO_USER_ID)).length).toBe(d.transactions.length);
+    expect(await repo.listTransactions('real-user')).toEqual([]); // demo data is invisible to any other user
+  });
+  it('real databases get categories only, never demo records', async () => {
+    const repo = await sqlRepo();
+    await seedSystemCategories(repo, 'real-user');
+    expect((await repo.listCategories('real-user')).length).toBe(DEFAULT_CATEGORIES.length);
+    expect(await repo.listAccounts('real-user')).toEqual([]);
+    expect(await repo.getProfile(DEMO_USER_ID)).toBeNull();
+  });
+});
+
+describe('home summary', () => {
+  const h = buildHomeSummary(snapshotOf(), TODAY);
+  it('reports first-run emptiness for a user with no data', () => {
+    const s = buildHomeSummary({ ...snapshotOf(), accounts: [], transactions: [], budgets: [], goals: [], recurringRules: [] }, TODAY);
+    expect(s.hasAccounts).toBe(false);
+    expect(s.hasTransactions).toBe(false);
+    expect(s.recent).toEqual([]);
+    expect(s.whatChanged).toEqual({ status: 'insufficient_data', reason: 'no_transactions' });
+    expect(s.pulse.vsUsual).toBeNull();
+  });
+  it('derives the pulse from the ledger with transfers and savings excluded from spending', () => {
+    const d = snapshotOf();
+    const month = d.transactions.filter((t) => t.localDate >= '2025-03-01');
+    const spend = month.filter((t) => t.type === 'expense').reduce((s, t) => s + (t.splits ? t.splits.find((x) => x.personId === 'me')?.amountMinor ?? 0 : t.amountMinor), 0);
+    expect(h.pulse.spentMinor).toBe(spend);
+    expect(h.pulse.incomeMinor).toBe(9_500_000);
+    expect(h.pulse.availableMinor).toBe(h.safeToSpend.liquidMinor);
+    expect(h.pulse.savedMinor).toBeGreaterThan(0);
+  });
+  it('shows an unusual-spending comparison driven by Food, and flags the Food budget', () => {
+    expect(h.whatChanged.status).toBe('ok');
+    if (h.whatChanged.status !== 'ok') return;
+    expect(h.whatChanged.direction).toBe('higher');
+    expect(h.whatChanged.drivers[0]!.categoryId).toBe('cat.food');
+    expect(h.budgets.find((b) => b.budget.categoryId === 'cat.food')!.state).toBe('over');
+  });
+  it('lists unpaid bills in the next two weeks and recent activity newest first', () => {
+    expect(h.upcoming.map((u) => u.rule.name)).toEqual(['Electricity', 'Streaming']);
+    expect(h.upcoming.every((u) => u.date >= TODAY && u.date <= '2025-03-29')).toBe(true);
+    const dates = h.recent.map((r) => r.transaction.localDate);
+    expect([...dates].sort().reverse()).toEqual(dates);
+    expect(h.recent).toHaveLength(6);
+  });
+  it('safe to spend matches its documented formula', () => {
+    const s = h.safeToSpend;
+    expect(s.availableMinor).toBe(s.liquidMinor - s.upcomingMinor - s.reservedGoalsMinor - s.bufferMinor);
+    expect(s.daysRemaining).toBe(17);
+  });
+});
+
+describe('budget projection and display rounding', () => {
+  const b = { id: 'b', userId: 'u1', categoryId: null, amountMinor: 10_000_000, currency: 'BDT' };
+  it('does not extrapolate a fixed bill paid early in the month as a daily habit', () => {
+    const rent = tx({ type: 'expense', amountMinor: 2_500_000, localDate: '2025-03-05', categoryId: 'cat.bills.rent', recurringRuleId: 'r', occurrenceDate: '2025-03-05' });
+    const s = budgetStatus(b, [rent], DEFAULT_CATEGORIES, '2025-03-10');
+    expect(s.projectedMinor).toBe(2_500_000);
+    expect(s.state).toBe('on_track');
+  });
+  it('adds unpaid bills still due this month to the projection', () => {
+    const rule = { id: 'r2', userId: 'u1', name: 'Net', type: 'expense' as const, amountMinor: 120_000, currency: 'BDT', accountId: 'cash', categoryId: 'cat.bills.internet', frequency: 'monthly' as const, interval: 1, anchorDate: '2025-01-20', endDate: null, isBill: true, active: true };
+    const s = budgetStatus(b, [], DEFAULT_CATEGORIES, '2025-03-10', upcomingObligations([rule], [], '2025-03-10', '2025-03-31'));
+    expect(s.projectedMinor).toBe(120_000);
+  });
+  it('still projects everyday spending at its pace', () => {
+    const food = tx({ type: 'expense', amountMinor: 400_000, localDate: '2025-03-02', categoryId: 'cat.food.dining' });
+    expect(budgetStatus({ ...b, amountMinor: 1_000_000 }, [food], DEFAULT_CATEGORIES, '2025-03-10').projectedMinor).toBe(1_240_000);
+  });
+  it('floors safe figures and rounds comparisons to whole taka for display', () => {
+    expect(floorToWhole(1_245_747, 'BDT')).toBe(1_245_700);
+    expect(roundToWhole(866_633, 'BDT')).toBe(866_600);
+    expect(roundToWhole(866_650, 'BDT')).toBe(866_700);
+    expect(formatMoney(floorToWhole(1_245_747, 'BDT'), 'BDT')).toBe('৳12,457');
+  });
+});

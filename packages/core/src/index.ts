@@ -9,3 +9,8 @@ export * from './recurring';
 export * from './safeToSpend';
 export * from './whatChanged';
 export * from './ai';
+export * from './sql';
+export * from './goals';
+export * from './defaultCategories';
+export * from './demo';
+export * from './homeSummary';

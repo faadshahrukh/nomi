@@ -99,3 +99,14 @@ export function equalSplit(totalMinor: number, parties: string[]): Array<{ perso
   const rem = totalMinor - base * parties.length;
   return parties.map((personId, i) => ({ personId, amountMinor: base + (i < rem ? 1 : 0) }));
 }
+
+/** Display rounding: drops minor units below one whole unit (৳12,457.47 -> ৳12,457). Use for "safe" figures so they never overstate. */
+export function floorToWhole(minor: number, currency: CurrencyCode): number {
+  const unit = 10 ** currencyInfo(currency).minorUnit;
+  return Math.floor(minor / unit) * unit;
+}
+/** Display rounding to the nearest whole unit. Use for summary comparisons where decimals add noise. */
+export function roundToWhole(minor: number, currency: CurrencyCode): number {
+  const unit = 10 ** currencyInfo(currency).minorUnit;
+  return Math.round(minor / unit) * unit;
+}
