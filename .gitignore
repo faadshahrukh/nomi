@@ -11,3 +11,7 @@ coverage/
 supabase/.env
 supabase/.temp/
 supabase/.branches/
+
+# Generated native projects (EAS builds them from app.json)
+apps/mobile/android/
+apps/mobile/ios/

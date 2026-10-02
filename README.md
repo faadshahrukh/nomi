@@ -60,3 +60,8 @@ Node 22+, npm 10+. The Component gallery (More → Developer) is shown in develo
 2. Balances, totals, budgets, Safe to Spend and What Changed are pure functions over the transaction list. Nothing stores a balance.
 3. Transfers, loans, repayments and savings are never "spending".
 4. Raw text and transcripts are not stored unless the user opts in. Financial values do not go to logs or analytics.
+
+
+## Running on a phone
+
+Voice and bill reminders need a development build, not Expo Go: see `apps/mobile/EAS.md`.
