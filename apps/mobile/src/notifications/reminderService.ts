@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { PlannedReminder } from '@nomi/core';
+import { isExpoGo } from '@/lib/runtime';
 
 export type ReminderPermission = 'granted' | 'denied' | 'undetermined';
 
@@ -18,7 +19,7 @@ const CHANNEL = 'bills';
 
 /** expo-notifications, loaded lazily and guarded so a build without it falls back to "not available" rather than crashing. */
 export function createReminderService(): ReminderService {
-  if (Platform.OS === 'web') return noReminders;
+  if (Platform.OS === 'web' || isExpoGo) return noReminders; // Expo Go has no notifications module
   let N: typeof import('expo-notifications');
   try { N = require('expo-notifications'); } catch { return noReminders; }
   const map = (s: { granted: boolean; canAskAgain: boolean }): ReminderPermission => (s.granted ? 'granted' : s.canAskAgain ? 'undetermined' : 'denied');

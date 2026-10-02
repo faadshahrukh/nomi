@@ -1,5 +1,6 @@
 import type { VoiceFailure } from './voiceMachine';
 import { mapSpeechError } from './voiceMachine';
+import { isExpoGo } from '@/lib/runtime';
 
 /** Handlers for one recognition session. Only text ever crosses this boundary: audio is never stored or sent by Nomi. */
 export interface SpeechHandlers {
@@ -30,6 +31,7 @@ export const unavailableSpeech: SpeechService = {
  * typed-input fallback rather than a crash.
  */
 export function createSpeechService(): SpeechService {
+  if (isExpoGo) return unavailableSpeech; // Expo Go has no speech module; loading it only logs an error
   let mod: typeof import('expo-speech-recognition').ExpoSpeechRecognitionModule | null = null;
   try { mod = require('expo-speech-recognition').ExpoSpeechRecognitionModule; } catch { mod = null; }
   if (!mod) return unavailableSpeech;

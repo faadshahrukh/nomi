@@ -46,7 +46,7 @@ export default function NotificationsScreen() {
       <Surface padding="lg" rounded="lg" style={{ gap: space.md }}>
         <Text variant="bodyStrong">Bill reminders</Text>
         <Text variant="callout" tone="muted">A note the day before a bill is due and another on the day, only for bills you have not marked paid. They never include amounts, so nothing private shows on your lock screen.</Text>
-        {!supported ? <Text variant="callout" tone="caution" accessibilityRole="alert">{demo ? 'Reminders are off for the example data.' : 'Reminders work on the phone app. This version cannot schedule them.'}</Text> : null}
+        {!supported ? <Text variant="callout" tone="caution" accessibilityRole="alert">{demo ? 'Reminders are off for the example data.' : 'Reminders need the installed app. Expo Go and the web preview cannot schedule them.'}</Text> : null}
         {supported && permission === 'denied' ? <Text variant="callout" tone="caution" accessibilityRole="alert">Notifications are blocked for Nomi. Turn them on in your phone settings, then come back.</Text> : null}
         <Segmented<'on' | 'off'> accessibilityLabel="Bill reminders" value={reminders.enabled && permission === 'granted' ? 'on' : 'off'} onChange={(v) => void toggle(v === 'on')}
           options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]} />
