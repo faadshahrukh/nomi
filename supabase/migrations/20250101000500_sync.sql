@@ -13,6 +13,7 @@ create sequence public.sync_rev_seq;
 revoke all on sequence public.sync_rev_seq from public, anon, authenticated;
 
 alter table public.profiles add column server_rev bigint;
+alter table public.categories add column server_rev bigint;
 alter table public.accounts add column server_rev bigint;
 alter table public.people add column server_rev bigint;
 alter table public.goals add column server_rev bigint;
@@ -21,6 +22,7 @@ alter table public.budgets add column server_rev bigint, add column deleted_at t
 alter table public.transactions add column server_rev bigint;
 
 update public.profiles set server_rev = nextval('public.sync_rev_seq');
+update public.categories set server_rev = nextval('public.sync_rev_seq');
 update public.accounts set server_rev = nextval('public.sync_rev_seq');
 update public.people set server_rev = nextval('public.sync_rev_seq');
 update public.goals set server_rev = nextval('public.sync_rev_seq');
@@ -29,6 +31,7 @@ update public.budgets set server_rev = nextval('public.sync_rev_seq');
 update public.transactions set server_rev = nextval('public.sync_rev_seq');
 
 alter table public.profiles alter column server_rev set not null;
+alter table public.categories alter column server_rev set not null;
 alter table public.accounts alter column server_rev set not null;
 alter table public.people alter column server_rev set not null;
 alter table public.goals alter column server_rev set not null;
@@ -42,6 +45,7 @@ begin
   new.server_rev := nextval('public.sync_rev_seq');
   return new;
 end $$;
+create trigger categories_rev before insert or update on public.categories for each row execute function public.stamp_server_rev();
 create trigger profiles_rev before insert or update on public.profiles for each row execute function public.stamp_server_rev();
 create trigger accounts_rev before insert or update on public.accounts for each row execute function public.stamp_server_rev();
 create trigger people_rev before insert or update on public.people for each row execute function public.stamp_server_rev();
@@ -81,7 +85,7 @@ begin
     base := nullif(item->>'base_version', '')::integer;
     rid := coalesce(incoming->>'id', 'profile');
     begin
-      if ent not in ('profiles', 'accounts', 'people', 'goals', 'recurring_rules', 'budgets', 'transactions') then
+      if ent not in ('profiles', 'categories', 'accounts', 'people', 'goals', 'recurring_rules', 'budgets', 'transactions') then
         raise exception 'unknown entity' using errcode = '22023';
       end if;
       cols := public.sync_columns(ent, incoming);
@@ -110,6 +114,14 @@ begin
         execute format('insert into public.profiles (user_id, %1$s) select $1, %1$s from jsonb_populate_record(null::public.profiles, $2) on conflict (user_id) do update set %2$s', collist, setlist) using uid, incoming;
         select to_jsonb(p) into saved from public.profiles p where p.user_id = uid;
 
+      elsif ent = 'categories' then
+        -- A category's id is unique across everyone (system categories share the table), so an id that belongs to someone else is refused, never overwritten.
+        collist := (select string_agg(quote_ident(c), ', ') from unnest(cols) c);
+        setlist := (select string_agg(format('%1$I = excluded.%1$I', c), ', ') from unnest(cols) c where c not in ('id', 'created_at'));
+        execute format('insert into public.categories (user_id, %1$s) select $1, %1$s from jsonb_populate_record(null::public.categories, $2) on conflict (id) do update set %2$s where public.categories.user_id = $1', collist, setlist) using uid, incoming;
+        select to_jsonb(c) into saved from public.categories c where c.user_id = uid and c.id = incoming->>'id';
+        if saved is null then raise exception 'category id not available' using errcode = '42501'; end if;
+
       else
         collist := (select string_agg(quote_ident(c), ', ') from unnest(cols) c);
         setlist := (select string_agg(format('%1$I = excluded.%1$I', c), ', ') from unnest(cols) c where c not in ('id', 'created_at'));
@@ -134,6 +146,7 @@ begin
   if auth.uid() is null then raise exception 'not signed in' using errcode = '28000'; end if;
   with changed as (
     select 'profiles' as entity, to_jsonb(x) as row, x.server_rev from public.profiles x where x.server_rev > p_since
+    union all select 'categories', to_jsonb(x), x.server_rev from public.categories x where x.user_id = auth.uid() and x.server_rev > p_since
     union all select 'accounts', to_jsonb(x), x.server_rev from public.accounts x where x.server_rev > p_since
     union all select 'people', to_jsonb(x), x.server_rev from public.people x where x.server_rev > p_since
     union all select 'goals', to_jsonb(x), x.server_rev from public.goals x where x.server_rev > p_since

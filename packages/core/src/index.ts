@@ -28,4 +28,6 @@ export * from './regions';
 export * from './accounts';
 export * from './budgetInput';
 export * from './goalInput';
+export * from './management';
+export * from './appLock';
 export * from './onboarding';

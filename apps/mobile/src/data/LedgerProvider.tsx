@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Crypto from 'expo-crypto';
-import { GOAL_ISSUE_MESSAGES, buildGoal, validateGoalInput, type GoalInput, REMINDER_DEFAULT_HOUR, buildExport, exportFileName, transactionsToCsv, ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
+import { ACCOUNT_EDIT_MESSAGES, CATEGORY_MESSAGES, PERSON_MESSAGES, buildCategory, buildPerson, canArchiveAccount, canArchiveCategory, validateAccountEdit, validateCategory, validatePerson, type AccountEdit, type CategoryInput, type Person, GOAL_ISSUE_MESSAGES, buildGoal, validateGoalInput, type GoalInput, REMINDER_DEFAULT_HOUR, buildExport, exportFileName, transactionsToCsv, ACCOUNT_ISSUE_MESSAGES, RECURRING_ISSUE_MESSAGES, buildRadar, buildRecurringRule, payOccurrence, validateRecurringInput, type RadarSignal, type RecurringInput, BUDGET_ISSUE_MESSAGES, buildBudget, parseBuffer, validateBudgetInput, type BudgetInput, TransactionService, ValidationError, finalizeDraft, type EditableDraft, buildAccount, buildHomeSummary, todayIn, validateNewAccount, type Account, type AccountIssue, type HomeSummary, type NewAccountInput, type LedgerSnapshot, type Profile, type Transaction, type TransactionInput } from '@nomi/core';
 import { appNow } from './clock';
 import { defaultDataMode, fallbackProfile, openRepository, userIdFor, type DataMode } from './repositories';
 
@@ -40,6 +40,14 @@ interface LedgerValue {
   markPaid: (ruleId: string, occurrenceDate: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Hides a Radar signal. It stays hidden for that month or item only. */
   dismissSignal: (key: string) => Promise<void>;
+  /** Adds a friend (or renames one). Returns the person so a question in the middle of capture can use them at once. */
+  savePerson: (name: string, editingId?: string | null) => Promise<{ ok: true; person: Person } | { ok: false; messages: string[] }>;
+  /** Changes an account's name, type, whether it counts as spendable, or its starting balance. */
+  editAccount: (id: string, edit: AccountEdit) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
+  /** Hides an account from pickers (its history stays) or brings it back. The last live account cannot be archived. */
+  archiveAccount: (id: string, archived: boolean) => Promise<{ ok: true } | { ok: false; message: string }>;
+  saveCategory: (input: CategoryInput, editingId?: string | null) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
+  archiveCategory: (id: string, archived: boolean) => Promise<{ ok: true } | { ok: false; message: string }>;
   /** Creates or changes a savings goal (pass its id). It feeds Safe to Spend straight away. Bad input comes back as messages. */
   saveGoal: (input: GoalInput, editingId?: string | null) => Promise<{ ok: true } | { ok: false; messages: string[] }>;
   /** Saves this device's bill-reminder choice. Scheduling itself is done by the reminder scheduler. */
@@ -167,6 +175,57 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
       try { await service.create(userIdFor(mode), payOccurrence(rule, occurrenceDate, state.summary.today)); } catch (e) {
         return { ok: false, message: e instanceof ValidationError && e.issues.some((i) => i.code === 'occurrence_already_recorded') ? 'That one is already recorded.' : "Couldn't record the payment. Nothing was changed." };
       }
+      await load(mode, true);
+      return { ok: true };
+    },
+    savePerson: async (name, editingId) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const issues = validatePerson(name, state.snapshot.people, editingId ?? null);
+      if (issues.length) return { ok: false, messages: issues.map((i) => PERSON_MESSAGES[i]) };
+      const existing = editingId ? state.snapshot.people.find((p) => p.id === editingId) ?? null : null;
+      const person = buildPerson(userIdFor(mode), Crypto.randomUUID(), name, existing);
+      await (await openRepository(mode)).putPerson(userIdFor(mode), person);
+      await load(mode, true);
+      return { ok: true, person };
+    },
+    editAccount: async (id, edit) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const acc = state.snapshot.accounts.find((a) => a.id === id);
+      if (!acc) return { ok: false, messages: ['That account is no longer there.'] };
+      const { issues, openingBalanceMinor } = validateAccountEdit(edit, state.snapshot.accounts, id, acc.currency);
+      if (issues.length || openingBalanceMinor === null) return { ok: false, messages: issues.map((i) => ACCOUNT_EDIT_MESSAGES[i]) };
+      await (await openRepository(mode)).putAccount(userIdFor(mode), { ...acc, name: edit.name.trim(), type: edit.type, includeInLiquid: edit.includeInLiquid, openingBalanceMinor });
+      await load(mode, true);
+      return { ok: true };
+    },
+    archiveAccount: async (id, archived) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const acc = state.snapshot.accounts.find((a) => a.id === id);
+      if (!acc) return { ok: false, message: 'That account is no longer there.' };
+      if (archived && !canArchiveAccount(state.snapshot.accounts, id)) return { ok: false, message: 'Keep at least one account. Add another first.' };
+      const repo = await openRepository(mode);
+      await repo.putAccount(userIdFor(mode), { ...acc, archivedAt: archived ? appNow().toISOString() : null });
+      if (archived && state.snapshot.profile.defaultAccountId === id) await repo.putProfile(userIdFor(mode), { ...state.snapshot.profile, defaultAccountId: null, userId: userIdFor(mode) });
+      await load(mode, true);
+      return { ok: true };
+    },
+    saveCategory: async (input, editingId) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const cats = state.snapshot.categories;
+      const issues = validateCategory(input, cats, editingId ?? null);
+      if (issues.length) return { ok: false, messages: issues.map((i) => CATEGORY_MESSAGES[i]) };
+      const existing = editingId ? cats.find((c) => c.id === editingId) ?? null : null;
+      await (await openRepository(mode)).putCategory(userIdFor(mode), buildCategory(userIdFor(mode), `cat.u.${Crypto.randomUUID()}`, input, existing));
+      await load(mode, true);
+      return { ok: true };
+    },
+    archiveCategory: async (id, archived) => {
+      if (state.status !== 'ready') throw new Error('Ledger is not ready');
+      const cats = state.snapshot.categories;
+      const c = cats.find((x) => x.id === id);
+      if (!c) return { ok: false, message: 'That category is no longer there.' };
+      if (archived) { const can = canArchiveCategory(cats, id); if (!can.ok) return { ok: false, message: can.reason === 'system_readonly' ? CATEGORY_MESSAGES.system_readonly : 'Archive its sub-categories first.' }; }
+      await (await openRepository(mode)).putCategory(userIdFor(mode), { ...c, archivedAt: archived ? appNow().toISOString() : null });
       await load(mode, true);
       return { ok: true };
     },

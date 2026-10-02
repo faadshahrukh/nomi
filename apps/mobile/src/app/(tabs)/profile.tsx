@@ -26,7 +26,6 @@ export default function Profile() {
     : !aiOn ? 'Messages are understood on this device only and never leave it.'
     : auth.status === 'signedIn' ? 'Your message is sent securely to an AI service to be understood. Only the sentence and the names of your accounts, categories and people are sent. Balances and history never are.'
     : 'AI understanding starts when you sign in. Until then messages stay on this device.';
-  const later = (what: string) => () => toast.show({ message: `${what} isn't built yet.`, tone: 'info' });
   return (
     <Screen>
       <Surface padding="lg" rounded="xl" style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
@@ -79,9 +78,10 @@ export default function Profile() {
         <SectionHeader title="Settings" />
         <Surface padding="sm">
           <ListRow icon="wallet" title="Accounts" subtitle="Cash, bank, cards, mobile wallets" showChevron onPress={() => router.push('/accounts')} />
-          <ListRow icon="tag" title="Categories" subtitle="Edit how spending is grouped" showChevron onPress={later('Categories')} />
+          <ListRow icon="tag" title="Categories" subtitle="Edit how spending is grouped" showChevron onPress={() => router.push('/categories')} />
+          <ListRow icon="users" title="People" subtitle="Friends you split costs with or lend to" showChevron onPress={() => router.push('/people')} />
           <ListRow icon="bell" title="Notifications" subtitle="Bill reminders, no amounts on the lock screen" showChevron onPress={() => router.push('/notifications')} />
-          <ListRow icon="shield" title="App lock" subtitle="Not available yet" showChevron onPress={later('App lock')} />
+          <ListRow icon="shield" title="App lock" subtitle="Protect Nomi with your phone's unlock" showChevron onPress={() => router.push('/privacy')} />
           <ListRow icon="shield" title="Privacy and data" subtitle="Export, retention and deletion" showChevron onPress={() => router.push('/privacy')} />
         </Surface>
       </View>

@@ -1,4 +1,4 @@
-import type { Account, Budget, Goal, Id, Person, Profile, RecurringRule, Transaction } from '../types';
+import type { Account, Budget, Category, Goal, Id, Person, Profile, RecurringRule, Transaction } from '../types';
 import type { SyncEntity } from './types';
 
 type Kind = 'plain' | 'ts' | 'time';
@@ -13,6 +13,7 @@ const SPECS: Record<SyncEntity, Spec> = {
   profiles: [['country', 'country'], ['currency', 'currency'], ['timezone', 'timezone'], ['locale', 'locale'], ['confirmationPref', 'confirmation_pref'],
     ['highImpactMinor', 'high_impact_minor'], ['safetyBufferMinor', 'safety_buffer_minor'], ['retainRawInput', 'retain_raw_input'], ['aiProcessing', 'ai_processing'],
     ['displayName', 'display_name'], ['primaryGoals', 'primary_goals'], ['onboardedAt', 'onboarded_at', 'ts']],
+  categories: [['id', 'id'], ['parentId', 'parent_id'], ['name', 'name'], ['kind', 'kind'], ['archivedAt', 'archived_at', 'ts']],
   accounts: [['id', 'id'], ['name', 'name'], ['type', 'type'], ['currency', 'currency'], ['aliases', 'aliases'], ['openingBalanceMinor', 'opening_balance_minor'],
     ['includeInLiquid', 'include_in_liquid'], ['archivedAt', 'archived_at', 'ts']],
   people: [['id', 'id'], ['name', 'name']],
@@ -46,6 +47,7 @@ export function toServerRow(entity: SyncEntity, domain: object, tombstone?: stri
 }
 
 /** A record as the app understands it, from a server row. */
+export function fromServerRow(entity: 'categories', row: Record<string, unknown>, userId: Id): Category;
 export function fromServerRow(entity: 'accounts', row: Record<string, unknown>, userId: Id): Account;
 export function fromServerRow(entity: 'people', row: Record<string, unknown>, userId: Id): Person;
 export function fromServerRow(entity: 'goals', row: Record<string, unknown>, userId: Id): Goal;

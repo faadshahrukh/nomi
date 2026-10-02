@@ -78,3 +78,12 @@ The product owner's Home design was applied: new palette and tokens, gradient su
 ## Not implemented yet, so do not assume it works
 
 Deployed backend, live AI, app lock.
+
+
+## After milestone 12: filling the remaining MVP gaps
+
+Found by using the app as a new user rather than from the milestone list:
+- **People:** there was no way to add a friend, so shared costs and loans only worked on demo data. Added a People screen, adding a person inline when Nomi asks "who is this?", and understanding "Lent Zubair 500" / "Zubair paid me back" for someone not saved yet.
+- **Accounts:** rename, change type, change whether it counts as spendable, fix the starting balance, archive and restore (never the last live account).
+- **Categories:** add your own (and sub-categories), rename, archive; built-in ones are read-only. Your own categories sync, parents before children, before anything that uses them. The on-device interpreter now recognises a category by the name you gave it.
+- **App lock:** the phone's own unlock (fingerprint, face, PIN) after a grace period you choose, hides the app in the app switcher, and never traps you out if the phone has no screen lock.

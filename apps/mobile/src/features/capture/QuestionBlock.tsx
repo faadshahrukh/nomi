@@ -1,3 +1,4 @@
+import { AddPersonInline } from '@/features/people/AddPersonInline';
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { formatMoney, frequentCategories, parseAmountText, type Clarification, type EditableDraft, type Transaction } from '@nomi/core';
@@ -47,9 +48,11 @@ export function QuestionBlock({ question, ctx, transactions, onAnswer, onMore }:
       ) : null}
 
       {question.field === 'person' ? (
-        ctx.people.length
-          ? <View style={wrap}>{ctx.people.map((p) => <Chip key={p.id} label={p.name} onPress={() => onAnswer({ counterpartyId: p.id })} />)}</View>
-          : <Text variant="callout" tone="muted">You have no people saved yet. Adding people arrives with Money Circle.</Text>
+        <View style={{ gap: space.md }}>
+          {ctx.people.length ? <View style={wrap}>{ctx.people.map((p) => <Chip key={p.id} label={p.name} onPress={() => onAnswer({ counterpartyId: p.id })} />)}</View> : null}
+          <Text variant="caption" tone="muted">{ctx.people.length ? 'Someone new?' : 'Who is this? Add them once and Nomi remembers.'}</Text>
+          <AddPersonInline onAdded={(p) => onAnswer({ counterpartyId: p.id })} />
+        </View>
       ) : null}
 
       {question.field === 'goal' ? <View style={wrap}>{ctx.goals.map((g) => <Chip key={g.id} label={g.name} onPress={() => onAnswer({ goalId: g.id })} />)}</View> : null}

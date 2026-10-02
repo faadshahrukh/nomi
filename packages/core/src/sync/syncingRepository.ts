@@ -18,7 +18,11 @@ export class SyncingRepository implements LedgerRepository {
   listAccounts(u: Id) { return this.inner.listAccounts(u); }
   async putAccount(u: Id, a: Account) { await this.inner.atomic(async () => { await this.inner.putAccount(u, a); await this.queue(u, { entity: 'accounts', entityId: a.id, op: 'upsert', baseVersion: null, payload: a }); }); }
   listCategories(u: Id) { return this.inner.listCategories(u); }
-  putCategory(u: Id, c: Category) { return this.inner.putCategory(u, c); }
+  async putCategory(u: Id, c: Category) {
+    // Built-in categories (no owner) are seeded on every install and never synced; your own are.
+    if (c.userId === null) return this.inner.putCategory(u, c);
+    await this.inner.atomic(async () => { await this.inner.putCategory(u, c); await this.queue(u, { entity: 'categories', entityId: c.id, op: 'upsert', baseVersion: null, payload: c }); });
+  }
   listPeople(u: Id) { return this.inner.listPeople(u); }
   async putPerson(u: Id, p: Person) { await this.inner.atomic(async () => { await this.inner.putPerson(u, p); await this.queue(u, { entity: 'people', entityId: p.id, op: 'upsert', baseVersion: null, payload: p }); }); }
   listBudgets(u: Id) { return this.inner.listBudgets(u); }

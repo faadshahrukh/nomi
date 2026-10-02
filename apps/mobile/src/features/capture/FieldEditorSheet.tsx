@@ -6,6 +6,7 @@ import {
 import { fontFamily, MIN_TOUCH, radius, space } from '@/design/tokens';
 import { useTheme } from '@/design/theme';
 import { weekdayDate } from '@/lib/format';
+import { AddPersonInline } from '@/features/people/AddPersonInline';
 import { BottomSheet, Button, Chip, Icon, Text } from '@/components/ui';
 
 export type EditableField = 'amount' | 'category' | 'merchant' | 'notes' | 'account' | 'toAccount' | 'date' | 'type' | 'person' | 'direction' | 'goal';
@@ -133,11 +134,15 @@ export function FieldEditorSheet({ field, draft, ctx, onApply, onClose }: {
       ) : null}
 
       {field === 'person' ? (
-        ctx.people.length ? (
-          <ScrollView style={{ maxHeight: 320 }} accessibilityRole="radiogroup">
-            {ctx.people.map((p) => <Option key={p.id} label={p.name} selected={draft.counterpartyId === p.id} onPress={() => apply({ counterpartyId: p.id })} />)}
-          </ScrollView>
-        ) : <Text tone="muted">You have no people saved yet. Adding people arrives with Money Circle.</Text>
+        <View style={{ gap: space.md }}>
+          {ctx.people.length ? (
+            <ScrollView style={{ maxHeight: 240 }} accessibilityRole="radiogroup">
+              {ctx.people.map((p) => <Option key={p.id} label={p.name} selected={draft.counterpartyId === p.id} onPress={() => apply({ counterpartyId: p.id })} />)}
+            </ScrollView>
+          ) : null}
+          <Text variant="callout" tone="muted">{ctx.people.length ? 'Someone new?' : 'Add the person once and Nomi remembers them.'}</Text>
+          <AddPersonInline onAdded={(p) => apply({ counterpartyId: p.id })} />
+        </View>
       ) : null}
 
       {field === 'direction' ? (

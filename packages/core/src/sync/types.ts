@@ -1,7 +1,7 @@
 import type { Id, Transaction } from '../types';
 
-export type SyncEntity = 'profiles' | 'accounts' | 'people' | 'goals' | 'recurring_rules' | 'budgets' | 'transactions';
-export const SYNC_ENTITIES: SyncEntity[] = ['profiles', 'accounts', 'people', 'goals', 'recurring_rules', 'budgets', 'transactions'];
+export type SyncEntity = 'profiles' | 'categories' | 'accounts' | 'people' | 'goals' | 'recurring_rules' | 'budgets' | 'transactions';
+export const SYNC_ENTITIES: SyncEntity[] = ['profiles', 'categories', 'accounts', 'people', 'goals', 'recurring_rules', 'budgets', 'transactions'];
 
 /** One local change waiting to be sent. Several edits of the same record collapse into one item, with `rev` counting them. */
 export interface OutboxItem {

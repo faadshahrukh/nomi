@@ -87,6 +87,10 @@ function dateOf(lower: string, ctx: Ctx): ProposedTransaction['date'] {
 function categoryOf(clause: string, merchantCat: string | null, input: InterpretInput): { name: string | null; conf: number } {
   const has = (n: string) => input.categoryNames.find((c) => c.toLowerCase() === n.toLowerCase()) ?? null;
   for (const [re, name] of CATEGORY_KEYWORDS) if (re.test(clause) && has(name)) return { name: has(name), conf: 0.9 };
+  // a category the person named in their own words, including ones they created (longest name wins, whole words only)
+  const named = [...input.categoryNames].sort((a, b) => b.length - a.length).find((n) => n.length >= 3
+    && new RegExp(`(?<![\\p{L}\\p{N}])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu').test(clause));
+  if (named) return { name: named, conf: 0.85 };
   if (merchantCat && has(merchantCat)) return { name: has(merchantCat), conf: 0.88 };
   return { name: null, conf: 0 };
 }
@@ -112,6 +116,15 @@ function accountsIn(lower: string, input: InterpretInput): Array<{ name: string;
   return hits.sort((x, y) => x.at - y.at);
 }
 const peopleIn = (text: string, input: InterpretInput) => input.personNames.filter((p) => mentions(text, p) >= 0);
+
+/** Someone named in a loan or repayment who is not saved yet ("Lent Zubair 500"). The name is passed on so the app can ask to add them, rather than guessing a category. */
+const NOT_NAMES = new Set(['me', 'my', 'him', 'her', 'them', 'us', 'back', 'some', 'money', 'cash']);
+function newPersonIn(clause: string): string | null {
+  const m = clause.match(/\b[Ll]ent\s+(\p{Lu}[\p{L}'-]*)/u) ?? clause.match(/\b[Bb]orrowed\b[^.]*?\bfrom\s+(\p{Lu}[\p{L}'-]*)/u)
+    ?? clause.match(/^\s*(\p{Lu}[\p{L}'-]*)\s+(?:paid|gave|sent|returned)\s+(?:me\s+)?back\b/u) ?? clause.match(/\b[Pp]aid\s+(\p{Lu}[\p{L}'-]*)\s+back\b/u);
+  const name = m?.[1] ?? null;
+  return name && !NOT_NAMES.has(name.toLowerCase()) ? name : null;
+}
 
 const NONE = { shares: null, counterpartyName: null, direction: null, goalName: null, toAccountName: null, paidByName: null, notes: null, currency: null } as const;
 
@@ -162,7 +175,9 @@ function oneClause(clause: string, ctx: Ctx): ProposedTransaction | null {
   const merchant = merchantOf(clause, input);
   const cat = categoryOf(clause, merchant.category, input);
   const accts = accountsIn(lower, input);
-  const people = peopleIn(clause, input);
+  const known = peopleIn(clause, input);
+  const fresh = known.length ? null : newPersonIn(clause);
+  const people = known.length ? known : fresh ? [fresh] : [];
   const hasVerb = /\b(spent|paid|pay|bought|buy|purchased|cost|was|were|gave)\b|খরচ|কিনলাম|দিলাম|করেছি|করলাম/i.test(clause);
 
   // repayment of a loan or shared bill

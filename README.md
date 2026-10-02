@@ -8,18 +8,24 @@ Source of truth for product intent: the *Conversational Expense App* build speci
 
 ## Status
 
+The MVP in the spec is built as code, with automated tests and browser checks. What has **not** happened yet: a deployed backend, a run on a real phone, and a live AI call. Those need your accounts and a phone; see "Next steps" below.
+
 | Area | State |
 |---|---|
-| Deterministic finance core (`packages/core`) | **Built and tested** (192 tests, including the real SQL run against SQLite and the server schema run on real Postgres) |
-| On-device storage (SQLite), demo data, Home summary | **Built**. Native only; web preview uses an in-memory store |
-| AI interpretation contract, validation, confirmation policy | **Built and tested**. An on-device rule-based interpreter is the live interpreter; the Claude adapter is not built |
-| Text capture end to end (type, review, correct, save, undo) | **Built** in the app |
-| Server: Postgres schema with row-level security, Claude interpreter Edge Function, sign-in adapter (email + Google), AI privacy setting | **Built and tested without live services**. Needs your Supabase, Google and Anthropic accounts to connect (see `supabase/README.md`). No sign-in screens yet (milestone 6) |
-| Mobile app (`apps/mobile`, Expo) | **Built**: design system and states, plus Home, Transactions (search, filters, detail, edit, delete), budgets, Money Pulse and Safe to Spend details, Planning (read-only) and Insights (What changed) reading real stored data. Text capture, first-run onboarding, accounts and sign-in screens work. Accessibility checks, an AI evaluation set and opt-in anonymous analytics (off, and unavailable without an endpoint) are in. Voice capture is built (needs a development build on a phone). Transactions can be searched, filtered, edited and deleted (with Undo) |
-| Backend (Supabase), auth, sync | **Built as code and tested** against real Postgres; not deployed (needs your Supabase project) |
-| Voice capture | Not started |
-| Financial Radar V1 (Home and `/radar`), Insights (What changed) | **Built**, rule-based, no AI |
-| Money Circle UI, Ask Money | Not started |
+| Money logic (`packages/core`): money, ledger, budgets, Safe to Spend, What Changed, recurring, Radar, export, sync engine, AI contract | **Built and tested** (350 tests, including real SQL on SQLite and the server schema and sync functions on real Postgres) |
+| App (`apps/mobile`): onboarding, Home, text and voice capture with review and correction, transactions (search, filters, edit, delete with undo), budgets, goals, recurring bills, accounts, categories, people, Money Pulse, Safe to Spend, Insights, Radar, privacy and data, bill reminders, app lock | **Built**; checked in a browser build (axe-core clean, 44 px targets, offline and keyboard use). Voice, reminders and app lock need a development build, not Expo Go |
+| On-device storage and demo data | **Built** (SQLite on phones; the web preview keeps data in memory) |
+| Understanding messages | On-device rules are the default (63 of 71 on the evaluation set, no safety violations). The Claude interpreter, prompt and Edge Function are built and tested against stubs; **never run against the live model** |
+| Server (Supabase): schema, row-level security, sign-in (email and Google), AI function, sync | **Built and tested without live services**; not deployed |
+| Offline-first sync with conflict handling | **Built**, verified with two simulated phones against real Postgres; not run live |
+| Money Circle screens, Ask Money, receipt OCR, bank/wallet sync | Not started (post-MVP by the spec) |
+
+## Next steps (need you)
+
+1. Build the app on a phone: `apps/mobile/EAS.md`.
+2. Deploy the backend: the first-deploy checklist in `supabase/README.md` (Supabase project, Google sign-in, Anthropic key).
+3. Run the evaluation set against the real model: `npm run eval -w @nomi/core`.
+4. Try it with a screen reader (VoiceOver, TalkBack) and with real Bangla speech.
 
 See `DEVELOPMENT_PLAN.md` for the order of work and `ARCHITECTURE.md` for how the pieces fit.
 

@@ -68,6 +68,9 @@ async function seedOutbox(d: SyncDeps, includeProfile: boolean) {
   const q = (entity: SyncEntity, entityId: string, payload: unknown, baseVersion: number | null = null) => repo.enqueueChange(userId, { entity, entityId, op: 'upsert', baseVersion, payload }, now);
   const pending = new Set((await repo.listOutbox(userId, 100000)).map((o) => keyOf(o.entity, o.entityId)));
   const add = async (entity: SyncEntity, id: string, payload: unknown) => { if (!pending.has(keyOf(entity, id))) await q(entity, id, payload); };
+  // your own categories first (parents before children): transactions, budgets and bills refer to them
+  const mine = (await repo.listCategories(userId)).filter((c) => c.userId !== null).sort((a, b) => Number(a.parentId !== null) - Number(b.parentId !== null));
+  for (const c of mine) await add('categories', c.id, c);
   for (const a of await repo.listAccounts(userId)) await add('accounts', a.id, a);
   for (const p of await repo.listPeople(userId)) await add('people', p.id, p);
   for (const g of await repo.listGoals(userId)) await add('goals', g.id, g);
@@ -150,6 +153,7 @@ async function pull(d: SyncDeps, report: SyncReport): Promise<{ profile: boolean
 async function apply(d: SyncDeps, entity: SyncEntity, row: Record<string, unknown>) {
   const { repo, userId } = d;
   switch (entity) {
+    case 'categories': return repo.putCategory(userId, fromServerRow('categories', row, userId));
     case 'accounts': return repo.putAccount(userId, fromServerRow('accounts', row, userId));
     case 'people': return repo.putPerson(userId, fromServerRow('people', row, userId));
     case 'goals': return repo.putGoal(userId, fromServerRow('goals', row, userId));

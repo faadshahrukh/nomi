@@ -25,7 +25,7 @@ export const EVAL_CASES: EvalCase[] = [
   { id: 'en-internet', text: 'Paid the internet bill 1200', tags: ['en', 'category'], expect: ready({ amountMinor: 120_000, categoryId: 'cat.bills.internet' }) },
   { id: 'en-rent', text: 'Rent 25000', tags: ['en', 'category'], expect: ready({ amountMinor: 2_500_000, categoryId: 'cat.bills.rent' }) },
   { id: 'en-k-suffix', text: 'Spent 5k on groceries', tags: ['en', 'category'], expect: ready({ amountMinor: 500_000, categoryId: 'cat.food.groceries' }) },
-  { id: 'en-lakh', text: 'Paid 1.5 lakh for tuition', tags: ['en', 'category'], expect: ready({ amountMinor: 15_000_000, categoryId: 'cat.education.tuition' }), knownGap: { rules: '"lakh" amounts parse, but "tuition" is not a category word the rules know' } },
+  { id: 'en-lakh', text: 'Paid 1.5 lakh for tuition', tags: ['en', 'category'], expect: ready({ amountMinor: 15_000_000, categoryId: 'cat.education.tuition' }) },
   { id: 'en-comma-amount', text: 'Spent 1,250 on dinner', tags: ['en', 'category'], expect: ready({ amountMinor: 125_000, categoryId: 'cat.food.dining' }) },
   { id: 'en-decimal', text: 'Lunch was 249.50', tags: ['en', 'category'], expect: ready({ amountMinor: 24_950, categoryId: 'cat.food.dining' }) },
   { id: 'en-taka-word', text: 'Spent 300 taka on a rickshaw', tags: ['en', 'category'], expect: ready({ amountMinor: 30_000 }) },

@@ -304,3 +304,29 @@ describe('server-side sync is tenant-safe', () => {
     await expect(asA.push(Array.from({ length: 501 }, () => ({ entity: 'people' as const, row: { id: 'p', name: 'x' }, base_version: null })))).rejects.toThrow();
   });
 });
+
+describe('your own categories sync before what uses them', () => {
+  it('a custom category and a transaction in it reach the other phone, parents first', async () => {
+    const a = await device(makers[0]![1], 'a'); await seed(a);
+    await a.app.putCategory(LOCAL, { id: 'cat.mine.pets', userId: LOCAL, parentId: null, name: 'Pets', kind: 'expense', archivedAt: null });
+    await a.app.putCategory(LOCAL, { id: 'cat.mine.vet', userId: LOCAL, parentId: 'cat.mine.pets', name: 'Vet', kind: 'expense', archivedAt: null });
+    const t = await a.svc.create(LOCAL, exp(80_000, '2025-03-14', { categoryId: 'cat.mine.vet', merchantName: 'PetCare' }));
+    expect(await a.sync()).toMatchObject({ status: 'ok', rejected: 0, pending: 0 }); // the transaction was not refused for an unknown category
+    const b = await device(makers[0]![1], 'b'); await b.sync();
+    expect((await b.raw.listCategories(LOCAL)).filter((c) => c.userId !== null).map((c) => c.id).sort()).toEqual(['cat.mine.pets', 'cat.mine.vet']);
+    expect((await tx(b, t.id))!.categoryId).toBe('cat.mine.vet');
+    await a.app.putCategory(LOCAL, { id: 'cat.mine.vet', userId: LOCAL, parentId: 'cat.mine.pets', name: 'Vet', kind: 'expense', archivedAt: '2025-03-15T00:00:00.000Z' });
+    await a.sync(); await b.sync();
+    expect((await b.raw.listCategories(LOCAL)).find((c) => c.id === 'cat.mine.vet')!.archivedAt).toBe('2025-03-15T00:00:00.000Z');
+  });
+  it('built-in categories are never uploaded, and an id belonging to someone else is refused', async () => {
+    const a = await device(makers[0]![1], 'a'); await seed(a); await a.sync();
+    const owned = await db.query(`select count(*)::int as n from public.categories where user_id = '${ACCOUNT_A}'`);
+    expect(Number((owned.rows[0] as { n: number }).n)).toBe(0);
+    const asB = new PgRemote(ACCOUNT_B);
+    const r = await asB.push([{ entity: 'categories', row: { id: 'cat.food', name: 'Hijack', kind: 'expense' }, base_version: null }]);
+    expect(r[0]!.status).toBe('rejected'); // cat.food is a built-in category
+    const still = await db.query(`select name from public.categories where id = 'cat.food'`);
+    expect((still.rows[0] as { name: string }).name).toBe('Food');
+  });
+});

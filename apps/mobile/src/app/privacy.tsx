@@ -6,13 +6,16 @@ import { space } from '@/design/tokens';
 import { useAuth } from '@/auth/AuthProvider';
 import { useLedger } from '@/data/LedgerProvider';
 import { useAnalytics } from '@/analytics/AnalyticsProvider';
+import { useAppLock } from '@/lock/AppLockProvider';
+import { LOCK_GRACE_CHOICES, type LockGraceSeconds } from '@nomi/core';
 import { shareTextFile } from '@/lib/shareFile';
-import { Button, ErrorState, Screen, ScreenTitle, Segmented, SkeletonLines, Surface, Text, useToast } from '@/components/ui';
+import { Button, Chip, ErrorState, Screen, ScreenTitle, Segmented, SkeletonLines, Surface, Text, useToast } from '@/components/ui';
 
 /** Your data, in your hands: what is kept, a full export, and real deletion. Each destructive step asks twice and says exactly what it removes. */
 export default function PrivacyScreen() {
   const router = useRouter();
   const analytics = useAnalytics();
+  const lock = useAppLock();
   const toast = useToast();
   const auth = useAuth();
   const { state, mode, retry, updateProfile, exportAll, deleteLocalData } = useLedger();
@@ -67,6 +70,26 @@ export default function PrivacyScreen() {
         <Segmented<'on' | 'off'> accessibilityLabel="Keep what I type or say" value={profile.retainRawInput ? 'on' : 'off'} onChange={(v) => { void updateProfile({ retainRawInput: v === 'on' }); }}
           options={[{ value: 'off', label: 'Off (recommended)' }, { value: 'on', label: 'On' }]} />
         <Text variant="callout" tone="muted">{profile.retainRawInput ? 'The original sentence is kept with each transaction you add from now on, so you can see what you said. Existing ones are unchanged.' : 'Only the details you confirmed are kept. The sentence itself is thrown away once understood.'}</Text>
+      </Surface>
+
+      <Surface padding="lg" rounded="lg" style={{ gap: space.md }}>
+        <Text variant="bodyStrong">App lock</Text>
+        {lock.available ? (
+          <>
+            <Segmented<'on' | 'off'> accessibilityLabel="App lock" value={lock.settings.enabled ? 'on' : 'off'}
+              onChange={(v) => { void lock.setEnabled(v === 'on').then((r) => { if (r === 'failed') toast.show({ message: 'The phone did not unlock, so app lock stayed off.', tone: 'info' }); }); }}
+              options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]} />
+            {lock.settings.enabled ? (
+              <View style={{ gap: space.xs }}>
+                <Text variant="callout" weight="semibold">Ask again after</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                  {LOCK_GRACE_CHOICES.map((g) => <Chip key={g} label={g === 0 ? 'Right away' : g < 60 ? `${g} seconds` : `${g / 60} ${g === 60 ? 'minute' : 'minutes'}`} selected={lock.settings.graceSeconds === g} onPress={() => void lock.setGrace(g as LockGraceSeconds)} />)}
+                </View>
+              </View>
+            ) : null}
+            <Text variant="callout" tone="muted">Uses your phone's fingerprint, face or PIN. Nomi never sees or stores them. When you leave the app, its screen is hidden in the app switcher too.</Text>
+          </>
+        ) : <Text variant="callout" tone="muted">App lock needs the phone app on a phone that has a screen lock (fingerprint, face or PIN) set up. It is not available in the web preview.</Text>}
       </Surface>
 
       <Surface padding="lg" rounded="lg" style={{ gap: space.md }}>
