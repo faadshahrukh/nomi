@@ -49,3 +49,30 @@ Use `npx expo start --dev-client --tunnel` if your network blocks phone-to-compu
 ## If a build fails
 
 Open the build page on expo.dev and read the log from the bottom. Common causes: not logged in, the `eas init` step skipped, or a package version mismatch (`npx expo install --check` fixes versions). Send me the last 30 lines of the log.
+
+## Building on your own computer instead (Android, Windows)
+
+No Expo account needed. It takes longer to set up the first time, then builds in a few minutes.
+
+1. **Android Studio** (https://developer.android.com/studio). On first launch let it install the SDK, then in *Settings, Languages & Frameworks, Android SDK* tick **SDK Platform 35** (or the newest), and in *SDK Tools* tick **Android SDK Build-Tools**, **Platform-Tools**, **NDK (Side by side)** and **CMake**.
+2. **JDK 17** (Android Studio ships one; or install Temurin 17). Check with `java -version`.
+3. Set environment variables (Windows Settings, search "environment variables"), then open a **new** PowerShell:
+   - `ANDROID_HOME` = `C:\Users\<you>\AppData\Local\Android\Sdk`
+   - add `%ANDROID_HOME%\platform-tools` to `Path`
+4. In PowerShell, from the repo:
+   ```
+   git pull origin claude/track-expense
+   npm install
+   cd apps\mobile
+   npx expo prebuild --platform android --clean
+   cd android
+   .\gradlew.bat assembleRelease
+   ```
+   Keep the repo path short (yours, `J:\nomi`, is fine): Windows' path-length limit breaks native builds in deep folders.
+5. The APK is at `apps\mobile\android\app\build\outputs\apk\release\app-release.apk`. Copy it to the phone (USB, Drive, or `adb install app-release.apk` with USB debugging on) and open it. Allow "install unknown apps" when asked.
+
+This is a **standalone** build: the app code is inside it, so it runs without your computer. It is signed with a debug key, which is fine for your own phone but not for the Play Store.
+
+To get a development build instead (live reload, connects to `npm run start:dev`), use `.\gradlew.bat assembleDebug`; the file is under `outputs\apk\debug\`.
+
+If Gradle fails, the last 40 lines before `FAILURE: Build failed` are what I need. Common ones: `ANDROID_HOME` not set, a missing NDK or CMake (install it in SDK Tools), or "path too long".
