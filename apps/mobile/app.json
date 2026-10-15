@@ -12,7 +12,11 @@
     },
     "android": {
       "package": "app.nomi.mobile",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F5A44"
+      }
     },
     "web": {
       "output": "single",
@@ -24,7 +28,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F4F6F9"
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F4F6F9",
+          "dark": {
+            "image": "./assets/adaptive-icon.png",
+            "backgroundColor": "#0B1210"
+          }
         }
       ],
       [
@@ -38,6 +49,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
